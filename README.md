@@ -41,11 +41,10 @@ Stop the stack with `Ctrl+C`. To reset the database, run:
 docker compose down -v
 ```
 
-Open a Rails console or run tests with:
+Open a Rails console with:
 
 ```sh
 docker compose exec api bin/rails c
-docker compose exec api bin/rails test
 ```
 
 ### Native setup

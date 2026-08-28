@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export PATH="/home/ubuntu/.rubies/ruby-3.3.6/bin:$PATH"
+
+(cd "$ROOT/api" && bin/rails server -p 3000) &
+API_PID=$!
+(cd "$ROOT/web" && npm run dev) &
+WEB_PID=$!
+
+trap 'kill "$API_PID" "$WEB_PID" 2>/dev/null || true; wait "$API_PID" "$WEB_PID" 2>/dev/null || true' INT TERM EXIT
+wait -n "$API_PID" "$WEB_PID"

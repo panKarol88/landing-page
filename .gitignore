@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+
+api/.env
+api/storage/*
+api/tmp/*
+api/log/*
+api/.bundle/
+api/config/master.key

@@ -5,12 +5,27 @@ posts = [
     body_markdown: <<~BODY,
       The best Rails applications I have worked on are not clever. They have boundaries that are easy to explain, queries that are visible in the code, and conventions that remove the need for a meeting.
 
+      ## Boring is a feature
+
       That does not mean every object belongs in a model. It means the application has a small vocabulary and uses it consistently. A service object is useful when it names a meaningful operation, not when it merely wraps three lines of Ruby.
+
+      A few habits keep the codebase legible:
+
+      - name operations after the business action they perform;
+      - keep database writes close to their transaction boundary;
+      - make the unhappy path visible in tests.
+
+      ```ruby
+      result = PublishPost.call(post, actor: current_user)
+      render json: result.post
+      ```
 
       I have learned to treat boringness as a feature. When a new engineer can predict where a change belongs, the framework is doing its job and the team can spend its energy on product decisions.
     BODY
     tags: %w[ruby rails architecture],
-    published: true
+    published: true,
+    published_at: Time.current - 4.days,
+    cover_image_url: "http://localhost:3000/covers/aurora.svg"
   },
   {
     title: "A Practical Guide to Reading a Slow Query",
@@ -24,7 +39,8 @@ posts = [
     BODY
     tags: %w[postgresql performance architecture],
     published: true,
-    cover_image_url: "https://picsum.photos/seed/query/1200/630"
+    published_at: Time.current - 24.days,
+    cover_image_url: "http://localhost:3000/covers/sunset.svg"
   },
   {
     title: "Testing the Behavior That Actually Matters",
@@ -37,7 +53,9 @@ posts = [
       This style also makes refactoring safer. When a controller becomes a command object or a query changes its implementation, the test remains useful because it never depended on the old arrangement of methods.
     BODY
     tags: %w[testing rails],
-    published: true
+    published: true,
+    published_at: Time.current - 53.days,
+    cover_image_url: "http://localhost:3000/covers/grid.svg"
   },
   {
     title: "Keeping a React UI Honest About Loading States",
@@ -51,7 +69,8 @@ posts = [
     BODY
     tags: %w[react frontend architecture],
     published: true,
-    cover_image_url: "https://picsum.photos/seed/loading/1200/630"
+    published_at: Time.current - 83.days,
+    cover_image_url: "http://localhost:3000/covers/aurora.svg"
   },
   {
     title: "The Smallest Useful Architecture Diagram",
@@ -64,7 +83,9 @@ posts = [
       I also put the decision next to the picture. “We keep this work asynchronous because the provider can take thirty seconds” is more durable than a box labeled “worker.” Context is the part that future readers cannot infer from arrows alone.
     BODY
     tags: %w[architecture],
-    published: true
+    published: true,
+    published_at: Time.current - 118.days,
+    cover_image_url: "http://localhost:3000/covers/forest.svg"
   },
   {
     title: "Career Momentum Comes From Finishing",
@@ -77,7 +98,9 @@ posts = [
       I now look for momentum in small completed loops: a migration with a rollback plan, a test that catches a real regression, or a conversation documented well enough that somebody else can act on it.
     BODY
     tags: %w[career],
-    published: true
+    published: true,
+    published_at: Time.current - 151.days,
+    cover_image_url: "http://localhost:3000/covers/sunset.svg"
   },
   {
     title: "Designing a Migration You Can Undo",
@@ -90,7 +113,8 @@ posts = [
       This approach also changes review conversations. Instead of asking whether the final schema is elegant, we can ask what happens when the deploy stops halfway through and how quickly the change can be reversed.
     BODY
     tags: %w[rails postgresql architecture],
-    published: false
+    published: false,
+    published_at: nil
   },
   {
     title: "Notes on Building a Tiny Design System",
@@ -103,7 +127,98 @@ posts = [
       The system should stay close to real product work. Each new primitive needs a user-facing reason to exist, and each documented example should show how it behaves when content is longer, slower, or less tidy than the happy path.
     BODY
     tags: %w[react design],
-    published: false
+    published: false,
+    published_at: nil
+  },
+  {
+    title: "A Good API Error Has a Job",
+    excerpt: "Error responses should help a caller decide what to do next, not simply announce that something went wrong.",
+    body_markdown: <<~BODY,
+      An API error is part of the interface contract. A status code tells a client how broadly to classify the problem, while the response body should provide enough context for a useful next action.
+
+      I try to distinguish invalid input, missing resources, and temporary failures. The distinction lets a UI highlight a field, change a route, or offer a retry without parsing a sentence written for humans.
+
+      Consistency matters more than cleverness here. A small documented error shape is easier to log, test, and evolve than a collection of controller-specific messages.
+    BODY
+    tags: %w[api architecture testing],
+    published: true,
+    published_at: Time.current - 184.days,
+    cover_image_url: "http://localhost:3000/covers/grid.svg"
+  },
+  {
+    title: "The Team Habit of Writing Things Down",
+    excerpt: "A short decision record can save a team from reopening the same question every few months.",
+    body_markdown: <<~BODY,
+      Documentation is often framed as a task that competes with delivery. I think of a good note as part of delivery: it gives the next person the context required to safely continue the work.
+
+      The most useful notes are specific about the decision, alternatives, and the evidence available at the time. They do not need to predict the future or become a complete manual.
+
+      Writing also exposes uncertainty early. If a decision is difficult to summarize, that may be a sign that ownership or constraints still need clarification before implementation begins.
+    BODY
+    tags: %w[career architecture],
+    published: true,
+    published_at: Time.current - 221.days,
+    cover_image_url: "http://localhost:3000/covers/forest.svg"
+  },
+  {
+    title: "Refactoring Without Losing the Plot",
+    excerpt: "The safest refactors improve the shape of code while keeping the product behavior observable.",
+    body_markdown: <<~BODY,
+      Refactoring is easiest to explain when the behavior under protection is explicit. Without that boundary, a cleanup can quietly become a feature change and reviews become a debate about taste.
+
+      I prefer small steps with a working test after each one. Rename a concept, move one responsibility, and let the compiler or suite tell us where the old assumption still lives.
+
+      The result is not merely cleaner code. It is a team that can change direction without making every improvement feel like a rewrite.
+    BODY
+    tags: %w[ruby testing career],
+    published: true,
+    published_at: Time.current - 255.days,
+    cover_image_url: "http://localhost:3000/covers/aurora.svg"
+  },
+  {
+    title: "When a Queue Is the Right Boundary",
+    excerpt: "Asynchronous work is useful when it gives a slow or unreliable dependency room to fail safely.",
+    body_markdown: <<~BODY,
+      A queue is not a universal performance button. It changes when a user receives feedback, how retries work, and where the system stores the state of an unfinished operation.
+
+      I reach for one when the caller does not need the external result before responding. That boundary keeps request latency predictable and lets workers apply backoff without holding open a browser connection.
+
+      The operational detail matters: jobs need an idempotency key, visible failure state, and a way for someone to inspect what happened after the original request is gone.
+    BODY
+    tags: %w[architecture rails performance],
+    published: true,
+    published_at: Time.current - 290.days,
+    cover_image_url: "http://localhost:3000/covers/sunset.svg"
+  },
+  {
+    title: "A Frontend Performance Budget That People Use",
+    excerpt: "A performance budget works when it is small enough to guide everyday decisions and visible before launch.",
+    body_markdown: <<~BODY,
+      Performance budgets are most effective when they describe the experience rather than a vanity number. Bundle weight, image size, and interaction timing each point at a different kind of user cost.
+
+      I like budgets that are checked in the same place as the build. A warning in a pull request arrives while the tradeoff is still easy to discuss, instead of after a report says the site got slower last quarter.
+
+      The budget should have an owner and an escape hatch. Product work sometimes needs an exception, but the exception should be visible enough that it does not become the new baseline by accident.
+    BODY
+    tags: %w[react frontend performance],
+    published: true,
+    published_at: Time.current - 325.days,
+    cover_image_url: "http://localhost:3000/covers/grid.svg"
+  },
+  {
+    title: "A Note on Reviewing Your Own Work",
+    excerpt: "A deliberate second look catches confusing names and missing edge cases before they become somebody else's problem.",
+    body_markdown: <<~BODY,
+      Self-review is not a substitute for another pair of eyes. It is a short pause that lets the author read the change as a teammate who does not have the surrounding context.
+
+      I check the happy path, the failure path, and the shape of the diff. I also look for names that made sense while I was implementing but will be ambiguous six months from now.
+
+      That habit makes collaboration kinder. Reviewers can spend their time on the important design questions instead of reconstructing what a small change was meant to do.
+    BODY
+    tags: %w[career testing],
+    published: true,
+    published_at: Time.current - 360.days,
+    cover_image_url: "http://localhost:3000/covers/forest.svg"
   }
 ]
 

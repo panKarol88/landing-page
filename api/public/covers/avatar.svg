@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title">
+  <title>Karol avatar</title>
+  <defs>
+    <linearGradient id="avatar" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#0e7490"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="128" fill="url(#avatar)"/>
+  <circle cx="128" cy="96" r="42" fill="#e0f2fe"/>
+  <path d="M55 220c8-48 35-73 73-73s65 25 73 73" fill="#e0f2fe"/>
+  <path d="M87 87c9-40 77-47 83 4-20-13-53-12-83-4Z" fill="#102a43"/>
+</svg>

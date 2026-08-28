@@ -3,7 +3,7 @@ headline: Software engineer who enjoys making complex systems feel simple
 bio:
   - I am Karol, a software engineer interested in the small decisions that make software pleasant to work with.
   - This is where I write about Ruby, web architecture, testing, and the lessons that come from shipping products.
-avatar_url: https://picsum.photos/seed/karol/256/256
+avatar_url: http://localhost:3000/covers/avatar.svg
 location: Europe
 links:
   - label: GitHub

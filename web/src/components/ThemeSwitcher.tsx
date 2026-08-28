@@ -1,18 +1,15 @@
 import { useEffect, useRef, useState } from "react";
+import { useTheme } from "./ThemeProvider";
 import { THEME_IDS, THEME_LABELS, type ThemeId } from "../themes/registry";
 
 export function ThemeSwitcher() {
-  const [theme, setTheme] = useState<ThemeId>(() => {
-    const stored = localStorage.getItem("theme") as ThemeId | null;
-    return stored && THEME_IDS.includes(stored) ? stored : "notion";
-  });
+  const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(THEME_IDS.indexOf(theme));
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem("theme", theme);
+    setActive(THEME_IDS.indexOf(theme));
   }, [theme]);
 
   useEffect(() => {
@@ -27,7 +24,6 @@ export function ThemeSwitcher() {
     setTheme(id);
     setActive(THEME_IDS.indexOf(id));
     setOpen(false);
-    window.dispatchEvent(new CustomEvent("theme-change", { detail: id }));
   };
 
   return (
@@ -40,15 +36,27 @@ export function ThemeSwitcher() {
         onClick={() => setOpen((value) => !value)}
         onKeyDown={(event) => {
           if (event.key === "Escape") setOpen(false);
-          if (event.key === "ArrowDown") { event.preventDefault(); setOpen(true); setActive((active + 1) % THEME_IDS.length); }
-          if (event.key === "ArrowUp") { event.preventDefault(); setOpen(true); setActive((active - 1 + THEME_IDS.length) % THEME_IDS.length); }
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            setOpen(true);
+            setActive((active + 1) % THEME_IDS.length);
+          }
+          if (event.key === "ArrowUp") {
+            event.preventDefault();
+            setOpen(true);
+            setActive((active - 1 + THEME_IDS.length) % THEME_IDS.length);
+          }
           if (event.key === "Enter" && open) choose(THEME_IDS[active]);
         }}
       >
         Theme: {THEME_LABELS[theme]} <span aria-hidden="true">⌄</span>
       </button>
       {open && (
-        <div role="listbox" aria-label="Choose theme" className="absolute right-0 mt-2 min-w-40 border border-border bg-surface p-1 rounded-theme shadow-card">
+        <div
+          role="listbox"
+          aria-label="Choose theme"
+          className="absolute right-0 mt-2 min-w-40 border border-border bg-surface p-1 rounded-theme shadow-card"
+        >
           {THEME_IDS.map((id, index) => (
             <button
               type="button"

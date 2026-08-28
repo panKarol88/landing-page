@@ -20,7 +20,31 @@ function ProtectedAdmin() {
 }
 
 function App() {
-  return <ThemeProvider><BrowserRouter><Routes><Route element={<PublicLayout />}><Route path="/" element={<Home />} /><Route path="/blog" element={<Blog />} /><Route path="/blog/:slug" element={<PostReader />} /><Route path="/about" element={<About />} /><Route path="*" element={<NotFound />} /></Route><Route path="/admin/login" element={<AdminLogin />} /><Route element={<ProtectedAdmin />}><Route path="/admin" element={<AdminDashboard />} /><Route path="/admin/posts/new" element={<PostEditor />} /><Route path="/admin/posts/:slug/edit" element={<PostEditor />} /></Route></Routes></BrowserRouter></ThemeProvider>;
+  return (
+    <ThemeProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<PublicLayout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<PostReader />} />
+            <Route path="/about" element={<About />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route element={<ProtectedAdmin />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/posts/new" element={<PostEditor />} />
+            <Route path="/admin/posts/:slug/edit" element={<PostEditor />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
+  );
 }
 
-createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

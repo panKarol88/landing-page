@@ -8,13 +8,22 @@ import type { Post } from "../types";
 
 export function PostReader() {
   const { slug } = useParams();
-  const { ReaderChrome } = useTheme();
+  const { components } = useTheme();
+  const { ReaderChrome } = components;
   const [post, setPost] = useState<Post | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
-    if (slug) api.getPost(slug).then((result) => setPost(result.post)).catch((reason: Error) => setError(reason.message));
+    if (slug)
+      api
+        .getPost(slug)
+        .then((result) => setPost(result.post))
+        .catch((reason: Error) => setError(reason.message));
   }, [slug]);
   if (error) return <ErrorState message={error} />;
   if (!post) return <LoadingState />;
-  return <ReaderChrome post={post}><Markdown content={post.body_markdown || ""} /></ReaderChrome>;
+  return (
+    <ReaderChrome post={post}>
+      <Markdown content={post.body_markdown || ""} />
+    </ReaderChrome>
+  );
 }

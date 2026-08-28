@@ -3,7 +3,7 @@ require "redcarpet"
 
 class FeedController < ApplicationController
   def show
-    renderer = Redcarpet::Markdown.new(Redcarpet::Render::HTML.new(hard_wrap: true))
+    renderer = Redcarpet::Markdown.new(Redcarpet::Render::HTML.new(hard_wrap: true, filter_html: true))
     posts = Post.published.limit(20)
     items = posts.map do |post|
       link = "#{site_url}/blog/#{post.slug}"

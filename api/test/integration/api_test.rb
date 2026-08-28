@@ -121,14 +121,19 @@ class ApiTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "<guid isPermaLink=\"true\">"
   end
 
-  test "RSS feed safely splits CDATA terminators" do
-    create_post(title: "CDATA Post", published: true, body_markdown: "<!-- ]]> after -->")
+  test "RSS feed filters HTML and safely escapes CDATA terminators" do
+    create_post(
+      title: "CDATA Post",
+      published: true,
+      body_markdown: "Before ]]> after\n\n<script>alert(1)</script>",
+    )
 
     get "/feed.xml"
 
     assert_response :success
-    assert_includes response.body, "]]]]><![CDATA[> after"
+    assert_includes response.body, "]]&gt; after"
     refute_includes response.body, "]]> after"
+    refute_includes response.body, "<script"
   end
 
   test "uploads reject SVG and accept PNG based on file bytes" do

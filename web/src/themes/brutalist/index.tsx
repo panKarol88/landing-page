@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { RSS_URL } from "../../api/client";
+import { resolveAssetUrl, RSS_URL } from "../../api/client";
 import { ThemeSwitcher } from "../../components/ThemeSwitcher";
 import { formatDate } from "../../types";
 import type {
@@ -150,6 +150,13 @@ export function BrutalistReaderChrome({ post, children }: ReaderChromeProps) {
       <p className="mt-16 text-xs uppercase tracking-widest text-accent">
         {formatDate(post.published_at)} // {post.reading_time_minutes} MIN
       </p>
+      {post.cover_image_url && (
+        <img
+          src={resolveAssetUrl(post.cover_image_url)}
+          alt=""
+          className="mt-8 max-h-80 w-full object-cover"
+        />
+      )}
       <h1 className="mt-5 font-display text-page-title font-bold uppercase leading-none tracking-tight">
         {post.title}
       </h1>

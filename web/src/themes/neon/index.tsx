@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { RSS_URL } from "../../api/client";
+import { resolveAssetUrl, RSS_URL } from "../../api/client";
 import { ThemeSwitcher } from "../../components/ThemeSwitcher";
 import { formatDate } from "../../types";
 import type {
@@ -133,6 +133,13 @@ export function NeonPostCard({ post }: PostCardProps) {
       to={`/blog/${post.slug}`}
       className="group relative overflow-hidden rounded-theme border border-border bg-surface p-6 text-fg no-underline shadow-card transition-all duration-300 hover:-translate-y-1 hover:shadow-card-hover before:absolute before:left-0 before:right-0 before:top-0 before:h-0.5 before:bg-accent"
     >
+      {post.cover_image_url && (
+        <img
+          src={resolveAssetUrl(post.cover_image_url)}
+          alt=""
+          className="mb-5 h-36 w-full rounded-theme object-cover"
+        />
+      )}
       <p className="font-mono text-xs text-muted">
         {formatDate(post.published_at)} // {post.reading_time_minutes} min
       </p>
@@ -163,6 +170,13 @@ export function NeonReaderChrome({ post, children }: ReaderChromeProps) {
       <p className="mt-16 font-mono text-xs text-muted">
         {formatDate(post.published_at)} · {post.reading_time_minutes} MINUTES
       </p>
+      {post.cover_image_url && (
+        <img
+          src={resolveAssetUrl(post.cover_image_url)}
+          alt=""
+          className="mt-8 max-h-80 w-full rounded-theme object-cover"
+        />
+      )}
       <h1 className="neon-headline mt-4 font-display text-page-title font-semibold leading-tight">
         {post.title}
       </h1>

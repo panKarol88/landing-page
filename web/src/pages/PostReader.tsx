@@ -13,11 +13,22 @@ export function PostReader() {
   const [post, setPost] = useState<Post | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
-    if (slug)
+    let ignore = false;
+    setPost(null);
+    setError("");
+    if (slug) {
       api
         .getPost(slug)
-        .then((result) => setPost(result.post))
-        .catch((reason: Error) => setError(reason.message));
+        .then((result) => {
+          if (!ignore) setPost(result.post);
+        })
+        .catch((reason: Error) => {
+          if (!ignore) setError(reason.message);
+        });
+    }
+    return () => {
+      ignore = true;
+    };
   }, [slug]);
   if (error) return <ErrorState message={error} />;
   if (!post) return <LoadingState />;

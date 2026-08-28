@@ -20,6 +20,6 @@ module AdminAuthentication
   end
 
   def jwt_secret
-    ENV.fetch("JWT_SECRET", "development-jwt-secret")
+    Api::Security.jwt_secret
   end
 end

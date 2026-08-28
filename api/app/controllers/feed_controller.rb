@@ -6,7 +6,7 @@ class FeedController < ApplicationController
     renderer = Redcarpet::Markdown.new(Redcarpet::Render::HTML.new(hard_wrap: true))
     posts = Post.published.limit(20)
     items = posts.map do |post|
-      link = "#{request.base_url}/posts/#{post.slug}"
+      link = "#{site_url}/blog/#{post.slug}"
       <<~ITEM
         <item>
           <title>#{escape_xml(post.title)}</title>
@@ -24,7 +24,7 @@ class FeedController < ApplicationController
         <channel>
           <title>Karol's Engineering Blog</title>
           <description>Notes on software engineering by Karol.</description>
-          <link>#{escape_xml(request.base_url)}</link>
+          <link>#{escape_xml(site_url)}</link>
           <lastBuildDate>#{Time.current.rfc2822}</lastBuildDate>
           #{items}
         </channel>
@@ -37,5 +37,9 @@ class FeedController < ApplicationController
 
   def escape_xml(value)
     CGI.escapeHTML(value.to_s)
+  end
+
+  def site_url
+    ENV.fetch("SITE_URL", "http://localhost:5173").chomp("/")
   end
 end

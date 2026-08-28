@@ -8,7 +8,7 @@ class Post < ApplicationRecord
   before_validation :generate_slug, on: :create
   before_save :sync_published_at
 
-  scope :published, -> { where(published: true).where.not(published_at: nil).order(published_at: :desc) }
+  scope :published, -> { where(published: true).order(published_at: :desc) }
   scope :drafts, -> { where(published: false).order(created_at: :desc) }
   scope :by_tag, ->(tag) { where("? = ANY(tags)", tag.to_s.downcase) }
 
@@ -32,8 +32,6 @@ class Post < ApplicationRecord
   end
 
   def sync_published_at
-    self.published_at = if published?
-      published_at || Time.current
-    end
+    self.published_at ||= Time.current if published?
   end
 end

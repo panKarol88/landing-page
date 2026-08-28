@@ -12,7 +12,7 @@ module Api
         return render json: { error: "Invalid password" }, status: :unauthorized unless valid
 
         payload = { admin: true, exp: 7.days.from_now.to_i }
-        render json: { token: JWT.encode(payload, ENV.fetch("JWT_SECRET", "development-jwt-secret"), "HS256") }
+        render json: { token: JWT.encode(payload, Api::Security.jwt_secret, "HS256") }
       end
     end
   end

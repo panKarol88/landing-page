@@ -10,25 +10,40 @@ export function Blog() {
   const { PostList, TagCloud } = components;
   const [searchParams, setSearchParams] = useSearchParams();
   const tag = searchParams.get("tag") || "";
-  const page = Number(searchParams.get("page") || 1);
+  const requestedPage = Number(searchParams.get("page") || 1);
+  const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
   const [tagsError, setTagsError] = useState("");
   const [error, setError] = useState("");
   useEffect(() => {
+    let ignore = false;
     setPosts(null);
+    setMeta(null);
+    setError("");
+    setTagsError("");
     api
       .listPosts({ tag, page, perPage: 10 })
       .then((result) => {
+        if (ignore) return;
         setPosts(result.posts);
         setMeta(result.meta);
       })
-      .catch((reason: Error) => setError(reason.message));
+      .catch((reason: Error) => {
+        if (!ignore) setError(reason.message);
+      });
     api
       .getTags()
-      .then((result) => setTags(result.tags))
-      .catch((reason: Error) => setTagsError(reason.message));
+      .then((result) => {
+        if (!ignore) setTags(result.tags);
+      })
+      .catch((reason: Error) => {
+        if (!ignore) setTagsError(reason.message);
+      });
+    return () => {
+      ignore = true;
+    };
   }, [tag, page]);
   return (
     <div className="py-section">

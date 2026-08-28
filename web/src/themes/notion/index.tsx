@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { RSS_URL } from "../../api/client";
+import { resolveAssetUrl, RSS_URL } from "../../api/client";
 import { ThemeSwitcher } from "../../components/ThemeSwitcher";
 import { formatDate } from "../../types";
 import type {
@@ -83,7 +83,7 @@ export function NotionTagCloud({ tags, activeTag, onSelect }: TagCloudProps) {
           type="button"
           onClick={() => onSelect("")}
           className={`rounded-full border border-border px-4 py-2 text-sm ${
-            !activeTag ? "bg-accent text-fg" : "bg-surface text-muted"
+            !activeTag ? "bg-accent text-on-accent" : "bg-surface text-muted"
           }`}
         >
           All
@@ -96,7 +96,7 @@ export function NotionTagCloud({ tags, activeTag, onSelect }: TagCloudProps) {
             key={tag.tag}
             onClick={() => onSelect(tag.tag)}
             className={`rounded-full border border-border px-4 py-2 text-sm ${
-              activeTag === tag.tag ? "bg-accent text-fg" : "bg-surface text-muted"
+              activeTag === tag.tag ? "bg-accent text-on-accent" : "bg-surface text-muted"
             }`}
           >
             #{tag.tag}
@@ -133,7 +133,11 @@ export function NotionPostCard({ post }: PostCardProps) {
     >
       {post.cover_image_url && (
         <div className="hidden h-28 w-36 shrink-0 overflow-hidden rounded-theme bg-bg sm:block">
-          <img src={post.cover_image_url} alt="" className="h-full w-full object-cover" />
+          <img
+            src={resolveAssetUrl(post.cover_image_url)}
+            alt=""
+            className="h-full w-full object-cover"
+          />
         </div>
       )}
       <div className="min-w-0">
@@ -164,7 +168,7 @@ export function NotionReaderChrome({ post, children }: ReaderChromeProps) {
       </Link>
       {post.cover_image_url && (
         <img
-          src={post.cover_image_url}
+          src={resolveAssetUrl(post.cover_image_url)}
           alt=""
           className="mt-8 max-h-80 w-full rounded-theme object-cover shadow-card"
         />

@@ -1,4 +1,5 @@
 ENV["RAILS_ENV"] ||= "test"
+ENV["JWT_SECRET"] ||= "test-jwt-secret"
 require_relative "../config/environment"
 require "rails/test_help"
 

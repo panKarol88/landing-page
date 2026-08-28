@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { About } from "./pages/About";
 import { Blog } from "./pages/Blog";
@@ -15,7 +15,10 @@ import { PostEditor } from "./pages/admin/PostEditor";
 import "./styles/themes.css";
 
 function ProtectedAdmin() {
-  if (!localStorage.getItem("admin_token")) return <AdminLogin />;
+  const location = useLocation();
+  if (!localStorage.getItem("admin_token")) {
+    return <Navigate to="/admin/login" state={{ from: location.pathname }} replace />;
+  }
   return <AdminLayout />;
 }
 

@@ -25,6 +25,7 @@ module Api
             cover_image_url: post.cover_image_url,
             published: post.published,
             published_at: post.published_at,
+            updated_at: post.updated_at,
             tags: post.tags || [],
             reading_time_minutes: post.reading_time_minutes
           }

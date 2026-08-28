@@ -16,16 +16,24 @@ export function Home() {
   } | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
+    let ignore = false;
+    setError("");
     Promise.all([api.getProfile(), api.listPosts({ perPage: 3 }), api.getTags()])
-      .then(([profile, posts, tags]) =>
+      .then(([profile, posts, tags]) => {
+        if (ignore) return;
         setData({
           profile,
           posts: posts.posts,
           postCount: posts.meta.total,
           tags: tags.tags,
-        }),
-      )
-      .catch((reason: Error) => setError(reason.message));
+        });
+      })
+      .catch((reason: Error) => {
+        if (!ignore) setError(reason.message);
+      });
+    return () => {
+      ignore = true;
+    };
   }, []);
   if (error) return <ErrorState message={error} />;
   if (!data) return <LoadingState />;

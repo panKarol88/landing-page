@@ -7,6 +7,7 @@ export type Post = {
   tags: string[];
   published?: boolean;
   published_at: string | null;
+  updated_at?: string | null;
   reading_time_minutes: number;
 };
 

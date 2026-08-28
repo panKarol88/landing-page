@@ -1,6 +1,13 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { registry, THEME_IDS, type ThemeComponents, type ThemeId } from "../themes/registry";
 
+const themeColors: Record<ThemeId, string> = {
+  notion: "#ffffff",
+  brutalist: "#0a0a0a",
+  pixel: "#2b1b6b",
+  neon: "#05060a",
+};
+
 type ThemeContextValue = {
   theme: ThemeId;
   setTheme: (theme: ThemeId) => void;
@@ -22,6 +29,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem("theme", theme);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", themeColors[theme]);
   }, [theme]);
 
   return (

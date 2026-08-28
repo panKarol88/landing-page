@@ -3,6 +3,19 @@ import type { Meta, Post, PostsResponse, Profile, Tag } from "../types";
 export const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:3000").replace(/\/$/, "");
 export const RSS_URL = `${API_URL}/feed.xml`;
 
+export class UnauthorizedError extends Error {
+  constructor() {
+    super("Authentication required");
+    this.name = "UnauthorizedError";
+  }
+}
+
+export function resolveAssetUrl(value: string | null | undefined) {
+  if (!value) return "";
+  if (/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(value)) return value;
+  return `${API_URL}/${value.replace(/^\/+/, "")}`;
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
@@ -10,6 +23,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (response.status === 401) throw new UnauthorizedError();
     throw new Error(payload.error || "Something went wrong. Please try again.");
   }
   return payload as T;
@@ -65,7 +79,10 @@ export const api = {
       body: form,
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error || "Upload failed.");
+    if (!response.ok) {
+      if (response.status === 401) throw new UnauthorizedError();
+      throw new Error(payload.error || "Upload failed.");
+    }
     return payload as { url: string };
   },
 };

@@ -11,6 +11,7 @@
   --color-border: #0000000d;
   --color-accent: #0075de;
   --color-accent-2: #ad6ded;
+  --color-accent-fg: #ffffff;
   --font-sans: "Inter", sans-serif;
   --font-display: "Inter", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
@@ -36,6 +37,7 @@
   --color-border: #2a2a2a;
   --color-accent: #ff3b00;
   --color-accent-2: #ff3b00;
+  --color-accent-fg: #000000;
   --font-sans: "JetBrains Mono", monospace;
   --font-display: "JetBrains Mono", monospace;
   --font-mono: "JetBrains Mono", monospace;
@@ -56,6 +58,7 @@
   --color-border: #000000;
   --color-accent: #ff004d;
   --color-accent-2: #ffec27;
+  --color-accent-fg: #2b1b6b;
   --font-sans: "VT323", monospace;
   --font-display: "Press Start 2P", cursive;
   --font-mono: "VT323", monospace;
@@ -76,6 +79,7 @@
   --color-border: #1e2a44;
   --color-accent: #00fff0;
   --color-accent-2: #ff00e5;
+  --color-accent-fg: #05060a;
   --font-sans: "Space Grotesk", sans-serif;
   --font-display: "Space Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", monospace;

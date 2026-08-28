@@ -68,7 +68,7 @@ posts = [
     tags: %w[ruby rails architecture],
     published: true,
     published_at: Time.current - 4.days,
-    cover_image_url: "http://localhost:3000/covers/aurora.svg"
+    cover_image_url: "/covers/aurora.svg"
   },
   {
     title: "A Practical Guide to Reading a Slow Query",
@@ -146,7 +146,7 @@ posts = [
     tags: %w[postgresql performance architecture],
     published: true,
     published_at: Time.current - 24.days,
-    cover_image_url: "http://localhost:3000/covers/sunset.svg"
+    cover_image_url: "/covers/sunset.svg"
   },
   {
     title: "Testing the Behavior That Actually Matters",
@@ -239,7 +239,7 @@ posts = [
     tags: %w[testing rails],
     published: true,
     published_at: Time.current - 53.days,
-    cover_image_url: "http://localhost:3000/covers/grid.svg"
+    cover_image_url: "/covers/grid.svg"
   },
   {
     title: "Keeping a React UI Honest About Loading States",
@@ -328,7 +328,7 @@ posts = [
     tags: %w[react frontend architecture],
     published: true,
     published_at: Time.current - 83.days,
-    cover_image_url: "http://localhost:3000/covers/aurora.svg"
+    cover_image_url: "/covers/aurora.svg"
   },
   {
     title: "The Smallest Useful Architecture Diagram",
@@ -410,7 +410,7 @@ posts = [
     tags: %w[architecture],
     published: true,
     published_at: Time.current - 118.days,
-    cover_image_url: "http://localhost:3000/covers/forest.svg"
+    cover_image_url: "/covers/forest.svg"
   },
   {
     title: "Career Momentum Comes From Finishing",
@@ -425,7 +425,7 @@ posts = [
     tags: %w[career],
     published: true,
     published_at: Time.current - 151.days,
-    cover_image_url: "http://localhost:3000/covers/sunset.svg"
+    cover_image_url: "/covers/sunset.svg"
   },
   {
     title: "Designing a Migration You Can Undo",
@@ -468,7 +468,7 @@ posts = [
     tags: %w[api architecture testing],
     published: true,
     published_at: Time.current - 184.days,
-    cover_image_url: "http://localhost:3000/covers/grid.svg"
+    cover_image_url: "/covers/grid.svg"
   },
   {
     title: "The Team Habit of Writing Things Down",
@@ -483,7 +483,7 @@ posts = [
     tags: %w[career architecture],
     published: true,
     published_at: Time.current - 221.days,
-    cover_image_url: "http://localhost:3000/covers/forest.svg"
+    cover_image_url: "/covers/forest.svg"
   },
   {
     title: "Refactoring Without Losing the Plot",
@@ -498,7 +498,7 @@ posts = [
     tags: %w[ruby testing career],
     published: true,
     published_at: Time.current - 255.days,
-    cover_image_url: "http://localhost:3000/covers/aurora.svg"
+    cover_image_url: "/covers/aurora.svg"
   },
   {
     title: "When a Queue Is the Right Boundary",
@@ -580,7 +580,7 @@ posts = [
     tags: %w[architecture rails performance],
     published: true,
     published_at: Time.current - 290.days,
-    cover_image_url: "http://localhost:3000/covers/sunset.svg"
+    cover_image_url: "/covers/sunset.svg"
   },
   {
     title: "A Frontend Performance Budget That People Use",
@@ -595,7 +595,7 @@ posts = [
     tags: %w[react frontend performance],
     published: true,
     published_at: Time.current - 325.days,
-    cover_image_url: "http://localhost:3000/covers/grid.svg"
+    cover_image_url: "/covers/grid.svg"
   },
   {
     title: "A Note on Reviewing Your Own Work",
@@ -610,7 +610,7 @@ posts = [
     tags: %w[career testing],
     published: true,
     published_at: Time.current - 360.days,
-    cover_image_url: "http://localhost:3000/covers/forest.svg"
+    cover_image_url: "/covers/forest.svg"
   }
 ]
 

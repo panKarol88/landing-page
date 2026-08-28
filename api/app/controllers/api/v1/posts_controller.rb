@@ -61,6 +61,7 @@ module Api
           excerpt: post.excerpt,
           cover_image_url: post.cover_image_url,
           tags: post.tags || [],
+          published: post.published,
           published_at: post.published_at,
           reading_time_minutes: post.reading_time_minutes
         }

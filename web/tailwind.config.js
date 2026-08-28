@@ -11,6 +11,7 @@ export default {
         border: "var(--color-border)",
         accent: "var(--color-accent)",
         "accent-2": "var(--color-accent-2)",
+        "on-accent": "var(--color-accent-fg)",
       },
       fontFamily: {
         sans: "var(--font-sans)",

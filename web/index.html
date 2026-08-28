@@ -9,7 +9,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Press+Start+2P&family=Space+Grotesk:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet" />
     <script>
       (function () {
-        var theme = localStorage.getItem("theme") || "notion";
+        var themes = ["notion", "brutalist", "pixel", "neon"];
+        var stored = localStorage.getItem("theme");
+        var theme = themes.indexOf(stored) >= 0 ? stored : "notion";
         document.documentElement.dataset.theme = theme;
       })();
     </script>

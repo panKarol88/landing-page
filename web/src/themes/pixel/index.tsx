@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { RSS_URL } from "../../api/client";
+import { resolveAssetUrl, RSS_URL } from "../../api/client";
 import { ThemeSwitcher } from "../../components/ThemeSwitcher";
 import { formatDate } from "../../types";
 import type {
@@ -36,7 +36,7 @@ export function PixelShell({ children }: ShellProps) {
               <Link
                 key={item.to}
                 to={item.to}
-                className="border-2 border-border bg-accent px-3 py-2 font-display text-[9px] text-fg no-underline shadow-card transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5"
+                className="border-2 border-border bg-accent px-3 py-2 font-display text-[9px] text-on-accent no-underline shadow-card transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5"
               >
                 {item.label}
               </Link>
@@ -74,7 +74,7 @@ export function PixelHero({ profile, postCount, tagCount }: HeroProps) {
             key={link.label}
             target="_blank"
             rel="noreferrer"
-            className="border-2 border-border bg-accent-2 px-3 py-2 font-display text-[10px] text-fg no-underline"
+            className="border-2 border-border bg-accent-2 px-3 py-2 font-display text-[10px] text-on-accent no-underline"
           >
             {link.label} ↗
           </a>
@@ -98,7 +98,7 @@ export function PixelTagCloud({ tags, activeTag, onSelect }: TagCloudProps) {
           type="button"
           onClick={() => onSelect("")}
           className={`border-2 border-border px-3 py-1 ${
-            !activeTag ? "bg-accent text-fg" : "bg-surface text-muted"
+            !activeTag ? "bg-accent text-on-accent" : "bg-surface text-muted"
           }`}
         >
           ALL
@@ -157,7 +157,11 @@ export function PixelPostCard({ post, index = 0 }: PostCardProps) {
         <span className="text-muted">{formatDate(post.published_at)}</span>
       </div>
       {post.cover_image_url && (
-        <img src={post.cover_image_url} alt="" className="h-36 w-full object-cover" />
+        <img
+          src={resolveAssetUrl(post.cover_image_url)}
+          alt=""
+          className="h-36 w-full object-cover"
+        />
       )}
       <div className="flex-1 p-4">
         <h3 className="font-display text-sm leading-relaxed">{post.title}</h3>
@@ -185,7 +189,7 @@ export function PixelReaderChrome({ post, children }: ReaderChromeProps) {
       </Link>
       {post.cover_image_url && (
         <img
-          src={post.cover_image_url}
+          src={resolveAssetUrl(post.cover_image_url)}
           alt=""
           className="mt-8 w-full border-4 border-border object-cover shadow-card"
         />

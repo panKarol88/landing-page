@@ -7,7 +7,7 @@ import {
   type SyntheticEvent,
 } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api } from "../../api/client";
+import { api, UnauthorizedError } from "../../api/client";
 import { Markdown } from "../../components/Markdown";
 import { ErrorState, LoadingState } from "../../components/States";
 
@@ -36,9 +36,12 @@ const empty: Draft = {
 function slugify(value: string) {
   return value
     .toLowerCase()
-    .trim()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+    .replace(/^-+/, "");
+}
+
+function normalizeSlug(value: string) {
+  return slugify(value).replace(/-+$/, "");
 }
 
 export function PostEditor() {
@@ -55,9 +58,11 @@ export function PostEditor() {
 
   useEffect(() => {
     if (!slug) return;
+    let ignore = false;
     api
       .getPost(slug, token)
       .then(({ post }) => {
+        if (ignore) return;
         setDraft({
           title: post.title,
           slug: post.slug,
@@ -69,9 +74,22 @@ export function PostEditor() {
         });
         setOriginalSlug(post.slug);
       })
-      .catch((reason: Error) => setError(reason.message))
-      .finally(() => setLoading(false));
-  }, [slug, token]);
+      .catch((reason: Error) => {
+        if (ignore) return;
+        if (reason instanceof UnauthorizedError) {
+          localStorage.removeItem("admin_token");
+          navigate("/admin/login", { replace: true });
+        } else {
+          setError(reason.message);
+        }
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [navigate, slug, token]);
 
   const set = (field: keyof Draft, value: string | boolean | string[]) => {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -99,7 +117,12 @@ export function PostEditor() {
       const result = await api.upload(file, token);
       set("cover_image_url", result.url);
     } catch (reason) {
-      setError((reason as Error).message);
+      if (reason instanceof UnauthorizedError) {
+        localStorage.removeItem("admin_token");
+        navigate("/admin/login", { replace: true });
+      } else {
+        setError((reason as Error).message);
+      }
     } finally {
       setBusy(false);
     }
@@ -111,7 +134,7 @@ export function PostEditor() {
     setError("");
     try {
       const published = mode === "publish" ? true : mode === "unpublish" ? false : draft.published;
-      const payload = { ...draft, published };
+      const payload = { ...draft, slug: normalizeSlug(draft.slug), published };
       const result = originalSlug
         ? await api.updatePost(originalSlug, payload, token)
         : await api.createPost(payload, token);
@@ -119,7 +142,12 @@ export function PostEditor() {
       setOriginalSlug(result.post.slug);
       navigate(`/admin/posts/${result.post.slug}/edit`, { replace: true });
     } catch (reason) {
-      setError((reason as Error).message);
+      if (reason instanceof UnauthorizedError) {
+        localStorage.removeItem("admin_token");
+        navigate("/admin/login", { replace: true });
+      } else {
+        setError((reason as Error).message);
+      }
     } finally {
       setBusy(false);
     }
@@ -165,6 +193,7 @@ export function PostEditor() {
                   setSlugEdited(true);
                   set("slug", slugify(event.target.value));
                 }}
+                onBlur={() => set("slug", normalizeSlug(draft.slug))}
                 className="mt-2 w-full rounded-theme border border-border bg-surface px-4 py-3 text-fg"
               />
             </label>
@@ -267,7 +296,7 @@ export function PostEditor() {
               type="button"
               disabled={busy}
               onClick={(event) => save(event, "publish")}
-              className="rounded-theme bg-accent px-5 py-3 text-sm font-medium text-fg"
+              className="rounded-theme bg-accent px-5 py-3 text-sm font-medium text-on-accent"
             >
               Publish
             </button>

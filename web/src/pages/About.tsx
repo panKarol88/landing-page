@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api } from "../api/client";
+import { api, resolveAssetUrl } from "../api/client";
 import { ErrorState, LoadingState } from "../components/States";
 import type { Profile } from "../types";
 
@@ -7,10 +7,19 @@ export function About() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
+    let ignore = false;
+    setError("");
     api
       .getProfile()
-      .then(setProfile)
-      .catch((reason: Error) => setError(reason.message));
+      .then((result) => {
+        if (!ignore) setProfile(result);
+      })
+      .catch((reason: Error) => {
+        if (!ignore) setError(reason.message);
+      });
+    return () => {
+      ignore = true;
+    };
   }, []);
   if (error) return <ErrorState message={error} />;
   if (!profile) return <LoadingState />;
@@ -18,7 +27,7 @@ export function About() {
     <div className="py-section">
       <div className="flex flex-col gap-8 sm:flex-row sm:items-start">
         <img
-          src={profile.avatar_url}
+          src={resolveAssetUrl(profile.avatar_url)}
           alt={profile.name}
           className="h-32 w-32 rounded-theme object-cover"
         />

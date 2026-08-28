@@ -1,29 +1,64 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { api } from "../../api/client";
+import { Link, useNavigate } from "react-router-dom";
+import { api, UnauthorizedError } from "../../api/client";
 import { ErrorState, LoadingState } from "../../components/States";
 import { formatDate, type Post } from "../../types";
 
 type Status = "all" | "draft" | "published";
 export function AdminDashboard() {
+  const navigate = useNavigate();
   const token = localStorage.getItem("admin_token") || "";
   const [status, setStatus] = useState<Status>("all");
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [error, setError] = useState("");
   const load = () => {
     setPosts(null);
+    setError("");
     api
       .listAdminPosts(status, token)
       .then((result) => setPosts(result.posts))
-      .catch((reason: Error) => setError(reason.message));
+      .catch((reason: Error) => {
+        if (reason instanceof UnauthorizedError) {
+          localStorage.removeItem("admin_token");
+          navigate("/admin/login", { replace: true });
+        } else {
+          setError(reason.message);
+        }
+      });
   };
-  useEffect(load, [status]);
+  useEffect(() => {
+    let ignore = false;
+    setPosts(null);
+    setError("");
+    api
+      .listAdminPosts(status, token)
+      .then((result) => {
+        if (!ignore) setPosts(result.posts);
+      })
+      .catch((reason: Error) => {
+        if (ignore) return;
+        if (reason instanceof UnauthorizedError) {
+          localStorage.removeItem("admin_token");
+          navigate("/admin/login", { replace: true });
+        } else {
+          setError(reason.message);
+        }
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [navigate, status, token]);
   const update = async (post: Post, published: boolean) => {
     try {
       await api.updatePost(post.slug, { published }, token);
       load();
     } catch (reason) {
-      setError((reason as Error).message);
+      if (reason instanceof UnauthorizedError) {
+        localStorage.removeItem("admin_token");
+        navigate("/admin/login", { replace: true });
+      } else {
+        setError((reason as Error).message);
+      }
     }
   };
   const remove = async (post: Post) => {
@@ -32,7 +67,12 @@ export function AdminDashboard() {
       await api.deletePost(post.slug, token);
       load();
     } catch (reason) {
-      setError((reason as Error).message);
+      if (reason instanceof UnauthorizedError) {
+        localStorage.removeItem("admin_token");
+        navigate("/admin/login", { replace: true });
+      } else {
+        setError((reason as Error).message);
+      }
     }
   };
   if (error && !posts) return <ErrorState message={error} onRetry={load} />;
@@ -45,7 +85,7 @@ export function AdminDashboard() {
         </div>
         <Link
           to="/admin/posts/new"
-          className="rounded-theme bg-accent px-4 py-3 text-sm font-medium text-fg no-underline"
+          className="rounded-theme bg-accent px-4 py-3 text-sm font-medium text-on-accent no-underline"
         >
           New post
         </Link>
@@ -62,7 +102,7 @@ export function AdminDashboard() {
           </button>
         ))}
       </div>
-      {error && <ErrorState message={error} />}{" "}
+      {error && <ErrorState message={error} />}
       {!posts ? (
         <LoadingState />
       ) : (
@@ -81,7 +121,7 @@ export function AdminDashboard() {
                 <tr className="border-b border-border last:border-0" key={post.slug}>
                   <td className="px-4 py-4 font-medium">{post.title}</td>
                   <td className="px-4 py-4 text-muted">{post.published ? "Published" : "Draft"}</td>
-                  <td className="px-4 py-4 text-muted">{formatDate(post.published_at)}</td>
+                  <td className="px-4 py-4 text-muted">{formatDate(post.updated_at || null)}</td>
                   <td className="space-x-4 px-4 py-4 text-right">
                     <button
                       type="button"

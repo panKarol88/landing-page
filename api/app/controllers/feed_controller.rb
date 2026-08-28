@@ -10,7 +10,7 @@ class FeedController < ApplicationController
       <<~ITEM
         <item>
           <title>#{escape_xml(post.title)}</title>
-          <description><![CDATA[#{renderer.render(post.body_markdown)}]]></description>
+          <description>#{cdata(renderer.render(post.body_markdown))}</description>
           <pubDate>#{(post.published_at || post.created_at).rfc2822}</pubDate>
           <guid isPermaLink="true">#{escape_xml(link)}</guid>
           <link>#{escape_xml(link)}</link>
@@ -37,6 +37,10 @@ class FeedController < ApplicationController
 
   def escape_xml(value)
     CGI.escapeHTML(value.to_s)
+  end
+
+  def cdata(html)
+    "<![CDATA[#{html.to_s.gsub("]]>", "]]]]><![CDATA[>")}]]>"
   end
 
   def site_url

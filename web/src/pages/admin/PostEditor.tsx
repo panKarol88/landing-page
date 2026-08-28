@@ -140,6 +140,7 @@ export function PostEditor() {
         : await api.createPost(payload, token);
       setDraft((current) => ({ ...current, published: result.post.published ?? published }));
       setOriginalSlug(result.post.slug);
+      setSlugEdited(true);
       navigate(`/admin/posts/${result.post.slug}/edit`, { replace: true });
     } catch (reason) {
       if (reason instanceof UnauthorizedError) {

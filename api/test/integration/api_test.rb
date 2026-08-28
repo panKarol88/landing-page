@@ -1,4 +1,6 @@
 require "test_helper"
+require "base64"
+require "tempfile"
 
 class ApiTest < ActionDispatch::IntegrationTest
   setup do
@@ -117,6 +119,44 @@ class ApiTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "<![CDATA[<h1>Feed heading</h1>"
     assert_includes response.body, "<link>http://localhost:5173/blog/feed-post</link>"
     assert_includes response.body, "<guid isPermaLink=\"true\">"
+  end
+
+  test "RSS feed safely splits CDATA terminators" do
+    create_post(title: "CDATA Post", published: true, body_markdown: "<!-- ]]> after -->")
+
+    get "/feed.xml"
+
+    assert_response :success
+    assert_includes response.body, "]]]]><![CDATA[> after"
+    refute_includes response.body, "]]> after"
+  end
+
+  test "uploads reject SVG and accept PNG based on file bytes" do
+    token = login
+    Tempfile.create([ "image", ".svg" ]) do |svg|
+      svg.write("<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>")
+      svg.rewind
+
+      post "/api/v1/uploads",
+        params: { file: Rack::Test::UploadedFile.new(svg.path, "image/png") },
+        headers: auth_headers(token)
+
+      assert_response :unprocessable_entity
+      assert_equal "File must be an image", JSON.parse(response.body)["error"]
+    end
+
+    Tempfile.create([ "image", ".png" ]) do |png|
+      png.binmode
+      png.write(Base64.decode64("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="))
+      png.rewind
+
+      post "/api/v1/uploads",
+        params: { file: Rack::Test::UploadedFile.new(png.path, "text/plain") },
+        headers: auth_headers(token)
+
+      assert_response :created
+      assert JSON.parse(response.body)["url"].present?
+    end
   end
 
   private

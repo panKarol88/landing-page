@@ -26,6 +26,7 @@ module Api
       def sniff_content_type(tempfile)
         header = tempfile.read(16)
         tempfile.rewind
+        return nil if header.nil? || header.bytesize < 12
 
         return "image/png" if header.start_with?("\x89PNG\r\n\x1A\n".b)
         return "image/jpeg" if header.start_with?("\xFF\xD8\xFF".b)

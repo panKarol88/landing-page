@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, UnauthorizedError } from "../../api/client";
 import { ErrorState, LoadingState } from "../../components/States";
@@ -11,54 +11,44 @@ export function AdminDashboard() {
   const [status, setStatus] = useState<Status>("all");
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [error, setError] = useState("");
-  const load = () => {
-    setPosts(null);
-    setError("");
-    api
-      .listAdminPosts(status, token)
-      .then((result) => setPosts(result.posts))
-      .catch((reason: Error) => {
-        if (reason instanceof UnauthorizedError) {
-          localStorage.removeItem("admin_token");
-          navigate("/admin/login", { replace: true });
-        } else {
+  const signOutOnUnauthorized = useCallback(
+    (reason: unknown) => {
+      if (!(reason instanceof UnauthorizedError)) return false;
+      localStorage.removeItem("admin_token");
+      navigate("/admin/login", { replace: true });
+      return true;
+    },
+    [navigate],
+  );
+  const load = useCallback(
+    (isStale: () => boolean = () => false) => {
+      setPosts(null);
+      setError("");
+      api
+        .listAdminPosts(status, token)
+        .then((result) => {
+          if (!isStale()) setPosts(result.posts);
+        })
+        .catch((reason: Error) => {
+          if (isStale() || signOutOnUnauthorized(reason)) return;
           setError(reason.message);
-        }
-      });
-  };
+        });
+    },
+    [signOutOnUnauthorized, status, token],
+  );
   useEffect(() => {
-    let ignore = false;
-    setPosts(null);
-    setError("");
-    api
-      .listAdminPosts(status, token)
-      .then((result) => {
-        if (!ignore) setPosts(result.posts);
-      })
-      .catch((reason: Error) => {
-        if (ignore) return;
-        if (reason instanceof UnauthorizedError) {
-          localStorage.removeItem("admin_token");
-          navigate("/admin/login", { replace: true });
-        } else {
-          setError(reason.message);
-        }
-      });
+    let stale = false;
+    load(() => stale);
     return () => {
-      ignore = true;
+      stale = true;
     };
-  }, [navigate, status, token]);
+  }, [load]);
   const update = async (post: Post, published: boolean) => {
     try {
       await api.updatePost(post.slug, { published }, token);
       load();
     } catch (reason) {
-      if (reason instanceof UnauthorizedError) {
-        localStorage.removeItem("admin_token");
-        navigate("/admin/login", { replace: true });
-      } else {
-        setError((reason as Error).message);
-      }
+      if (!signOutOnUnauthorized(reason)) setError((reason as Error).message);
     }
   };
   const remove = async (post: Post) => {
@@ -67,15 +57,10 @@ export function AdminDashboard() {
       await api.deletePost(post.slug, token);
       load();
     } catch (reason) {
-      if (reason instanceof UnauthorizedError) {
-        localStorage.removeItem("admin_token");
-        navigate("/admin/login", { replace: true });
-      } else {
-        setError((reason as Error).message);
-      }
+      if (!signOutOnUnauthorized(reason)) setError((reason as Error).message);
     }
   };
-  if (error && !posts) return <ErrorState message={error} onRetry={load} />;
+  if (error && !posts) return <ErrorState message={error} onRetry={() => load()} />;
   return (
     <div>
       <div className="flex flex-wrap items-end justify-between gap-5">

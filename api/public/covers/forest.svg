@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title">
+  <title>Forest gradient</title>
+  <defs>
+    <linearGradient id="forest" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#052e16"/>
+      <stop offset=".5" stop-color="#166534"/>
+      <stop offset="1" stop-color="#14532d"/>
+    </linearGradient>
+    <radialGradient id="mist" cx=".8" cy=".15" r=".75">
+      <stop stop-color="#86efac" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#86efac" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#forest)"/>
+  <rect width="1200" height="630" fill="url(#mist)"/>
+  <path d="M0 550 170 290l110 140 140-260 150 280 145-180 190 280 125-170 170 250v50H0Z" fill="#022c22" fill-opacity=".7"/>
+</svg>

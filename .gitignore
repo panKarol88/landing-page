@@ -8,3 +8,5 @@ api/tmp/*
 api/log/*
 api/.bundle/
 api/config/master.key
+web/node_modules/
+web/dist/

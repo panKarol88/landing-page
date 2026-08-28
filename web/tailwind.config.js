@@ -52,14 +52,6 @@ export default {
             "--tw-prose-th-borders": "var(--color-border)",
             "--tw-prose-td-borders": "var(--color-border)",
             fontFamily: "var(--font-sans)",
-            code: {
-              "&::before": {
-                content: "none",
-              },
-              "&::after": {
-                content: "none",
-              },
-            },
           },
         },
       },

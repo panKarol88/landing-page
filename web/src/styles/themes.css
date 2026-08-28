@@ -249,6 +249,10 @@
   border-radius: var(--radius);
   padding: 0.15em 0.35em;
 }
+.markdown-body code:not(pre code)::before,
+.markdown-body code:not(pre code)::after {
+  content: none;
+}
 @media (max-width: 712px) {
   .brutalist-rail {
     bottom: auto;

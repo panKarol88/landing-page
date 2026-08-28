@@ -20,10 +20,15 @@ Wait for the `api` service to finish preparing and seeding the database, then op
 [http://localhost:5173](http://localhost:5173). The API is available at
 [http://localhost:3000](http://localhost:3000).
 
+Both ports are bound to `127.0.0.1`, so the stack is not reachable from the
+network. The defaults are development-only; override `ADMIN_PASSWORD` and
+`JWT_SECRET`, and do not use this compose file for anything deployed.
+
 The admin editor is available at `/admin/login` with the default
-`ADMIN_PASSWORD=change-me`. To override it, create a root `.env` file (ignored by
-git) with `ADMIN_PASSWORD`, `JWT_SECRET`, `SITE_URL`, and `VITE_API_URL`, or pass
-those variables inline:
+`ADMIN_PASSWORD=change-me`. To override it, copy
+[`.env.example`](.env.example) to the root `.env` (the `.env` file is ignored by
+git; `.env.example` is not) and set `ADMIN_PASSWORD`, `JWT_SECRET`, `SITE_URL`,
+and `VITE_API_URL`, or pass those variables inline:
 
 ```sh
 ADMIN_PASSWORD=choose-a-password JWT_SECRET=choose-a-secret docker compose up --build

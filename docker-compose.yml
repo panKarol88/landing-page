@@ -24,7 +24,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-local-development-jwt-secret-change-me}
       SITE_URL: ${SITE_URL:-http://localhost:5173}
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - ./api:/rails
       - api-bundle:/usr/local/bundle
@@ -40,7 +40,7 @@ services:
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
     ports:
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
     volumes:
       - ./web:/app
       - web-node-modules:/app/node_modules

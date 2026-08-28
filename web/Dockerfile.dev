@@ -9,4 +9,5 @@ COPY . .
 
 EXPOSE 5173
 
+ENTRYPOINT ["bin/docker-dev-entrypoint"]
 CMD ["npm", "run", "dev"]

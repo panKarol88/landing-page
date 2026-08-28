@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -e
+
+lock_hash="$(sha256sum package-lock.json | awk '{print $1}')"
+stamp_file="/app/node_modules/.docker-dev-lock-hash"
+
+if [ ! -d node_modules ] ||
+  [ ! -f "$stamp_file" ] ||
+  [ "$(cat "$stamp_file")" != "$lock_hash" ]; then
+  npm ci
+  printf '%s\n' "$lock_hash" > "$stamp_file"
+fi
+
+exec "$@"

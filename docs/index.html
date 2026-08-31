@@ -176,15 +176,16 @@ pages state passwords, token internals, and failure modes plainly rather than hi
           var code = copy.parentElement.querySelector("code");
           var text = code ? code.innerText : "";
           var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          var failed = function () { copy.textContent = "Copy failed"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
           if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done, failed); });
           } else {
-            fallback(text, done);
+            fallback(text, done, failed);
           }
         }
       });
 
-      function fallback(text, done) {
+      function fallback(text, done, failed) {
         var area = document.createElement("textarea");
         area.value = text;
         area.setAttribute("readonly", "readonly");
@@ -192,7 +193,7 @@ pages state passwords, token internals, and failure modes plainly rather than hi
         area.style.opacity = "0";
         document.body.appendChild(area);
         area.select();
-        try { document.execCommand("copy"); done(); } catch (error) { /* ignore */ }
+        try { if (document.execCommand("copy")) { done(); } else { failed(); } } catch (error) { failed(); }
         document.body.removeChild(area);
       }
 

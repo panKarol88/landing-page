@@ -111,7 +111,7 @@
 <tr><td>Uploads are never garbage-collected</td><td>Deleted posts leave orphaned blobs</td><td>A purge job or manual cleanup</td></tr>
 <tr><td>No SSR / prerendering</td><td>Crawlers and social previews see an empty shell</td><td>Architectural &mdash; see <a href="../overview/decisions.html">Decisions</a></td></tr>
 <tr><td>Single shared password, no 2FA, no token revocation</td><td>One secret protects all writes</td><td><a href="../auth/jwt-internals.html">Auth internals</a></td></tr>
-<tr><td>Rate limiting uses the in-memory cache</td><td>Counters are per process and reset on restart</td><td>Use a shared cache store (solid_cache is already bundled)</td></tr>
+<tr><td>Rate limiting needs the production cache store</td><td><code>rate_limit</code> counts through <code>Rails.cache</code>, which is <code>solid_cache_store</code> in production and needs its own database</td><td>Provision and migrate the cache database at deploy time</td></tr>
 <tr><td>No frontend tests, no web CI job</td><td>UI regressions ship silently</td><td><a href="ci-quality.html">CI</a></td></tr>
 <tr><td>No backups, monitoring, or error reporting</td><td>A failure would be invisible and possibly unrecoverable</td><td>Infrastructure choice</td></tr>
 <tr><td>Tag counting and the feed run uncached</td><td>Every request tallies tags / re-renders 20 posts</td><td>Add caching if traffic ever justifies it</td></tr>
@@ -176,15 +176,16 @@ nothing is exposed &mdash; both published ports bind to <code>127.0.0.1</code>.<
           var code = copy.parentElement.querySelector("code");
           var text = code ? code.innerText : "";
           var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          var failed = function () { copy.textContent = "Copy failed"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
           if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done, failed); });
           } else {
-            fallback(text, done);
+            fallback(text, done, failed);
           }
         }
       });
 
-      function fallback(text, done) {
+      function fallback(text, done, failed) {
         var area = document.createElement("textarea");
         area.value = text;
         area.setAttribute("readonly", "readonly");
@@ -192,7 +193,7 @@ nothing is exposed &mdash; both published ports bind to <code>127.0.0.1</code>.<
         area.style.opacity = "0";
         document.body.appendChild(area);
         area.select();
-        try { document.execCommand("copy"); done(); } catch (error) { /* ignore */ }
+        try { if (document.execCommand("copy")) { done(); } else { failed(); } } catch (error) { failed(); }
         document.body.removeChild(area);
       }
 

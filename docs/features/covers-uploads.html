@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Covers &amp; uploads &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html">Tech stack</a></li>
+            <li><a href="../overview/decisions.html">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html">Public site</a></li>
+            <li><a href="../features/themes.html">Four themes</a></li>
+            <li><a href="../features/blog-posts.html">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html" class="active">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html">All endpoints</a></li>
+            <li><a href="../api/data-model.html">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html">Native local setup</a></li>
+            <li><a href="../ops/environment.html">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / Features / Covers &amp; uploads</div>
+        <article>
+          <h1>Covers &amp; uploads</h1>
+          <p class="lede">Cover images: either a URL you paste, or a file the API validates by its bytes and stores on disk.</p>
+
+<h2>The upload path</h2>
+<pre data-lang="flow"><code>Editor "Upload cover" input
+  -> FormData { file }
+  -> POST /api/v1/uploads   (Authorization: Bearer &lt;token&gt;, multipart)
+  -> ActiveStorage::Blob.create_and_upload!
+  -> 201 { "url": "http://localhost:3000/rails/active_storage/blobs/redirect/&lt;signed-id&gt;/&lt;filename&gt;" }
+  -> written into the post's cover_image_url field</code></pre>
+
+<h2>What the API accepts</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Rule</th>
+<th>Implementation</th>
+<th>Failure</th>
+</tr></thead>
+<tbody>
+<tr><td>Admin only</td><td><code>before_action :authenticate_admin!</code></td><td><code>401 {"error":"Authentication required"}</code></td></tr>
+<tr><td>A file must be present</td><td><code>params[:file]</code> presence</td><td><code>422 {"error":"Image file is required"}</code></td></tr>
+<tr><td>Max 5&nbsp;MB</td><td><code>MAX_SIZE = 5.megabytes</code></td><td><code>422 {"error":"File is too large (maximum 5MB)"}</code></td></tr>
+<tr><td>Real image bytes</td><td>first 16 bytes sniffed</td><td><code>422 {"error":"File must be an image"}</code></td></tr>
+</tbody></table></div>
+<h3>Magic-byte sniffing</h3>
+<pre data-lang="ruby"><code>return &quot;image/png&quot;  if header.start_with?(&quot;\x89PNG\r\n\x1A\n&quot;.b)
+return &quot;image/jpeg&quot; if header.start_with?(&quot;\xFF\xD8\xFF&quot;.b)
+return &quot;image/gif&quot;  if header.start_with?(&quot;GIF87a&quot;, &quot;GIF89a&quot;)
+return &quot;image/webp&quot; if header.start_with?(&quot;RIFF&quot;.b) &amp;&amp; header.byteslice(8, 4) == &quot;WEBP&quot;
+nil</code></pre>
+<p>The browser-declared content type is ignored entirely; the stored blob gets the sniffed type. Files
+shorter than 12 bytes are rejected. <strong>SVG is not accepted</strong> &mdash; it can contain script,
+and the feature is only meant for raster covers. An integration test uploads an SVG labelled
+<code>image/png</code> (expects 422) and a 1&times;1 PNG labelled <code>text/plain</code> (expects 201).</p>
+
+<h2>Where files live</h2>
+<ul>
+  <li>Development uses the Active Storage <code>local</code> disk service &rarr;
+      <code>api/storage/</code>, kept in the named volume <code>api-storage</code> under Docker.</li>
+  <li>Tests write to <code>api/tmp/storage</code>.</li>
+  <li>The returned URL is built with <code>rails_blob_url(blob, host: request.base_url)</code>, so it
+      is absolute and points at whatever host served the upload &mdash; hard-coding
+      <code>localhost:3000</code> into post bodies is exactly what this avoids, but it also means URLs
+      saved on one host do not follow you to another.</li>
+</ul>
+
+<h2>Cover images without uploading</h2>
+<p>Paste any URL into <strong>Cover image URL</strong>. Relative paths are resolved against the API by
+<code>resolveAssetUrl()</code>, which is how the five bundled SVG covers work:</p>
+<ul>
+  <li><code>/covers/aurora.svg</code>, <code>/covers/forest.svg</code>, <code>/covers/grid.svg</code>,
+      <code>/covers/sunset.svg</code> &mdash; seeded post covers, served from <code>api/public/covers/</code>.</li>
+  <li><code>/covers/avatar.svg</code> &mdash; the About-page avatar referenced from
+      <code>profile.yml</code>.</li>
+</ul>
+
+<div class="warn"><p>Deleting a post does not delete its uploaded blob. Orphaned files accumulate in
+<code>api/storage</code>; clean them from the console or wipe the volume with
+<code>docker compose down -v</code>.</p></div>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../features/blog-posts.html">&larr; Writing &amp; publishing</a>
+        <a class="pager-link" href="../features/tags-pagination.html">Tags &amp; pagination &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          var failed = function () { copy.textContent = "Copy failed"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done, failed); });
+          } else {
+            fallback(text, done, failed);
+          }
+        }
+      });
+
+      function fallback(text, done, failed) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { if (document.execCommand("copy")) { done(); } else { failed(); } } catch (error) { failed(); }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>

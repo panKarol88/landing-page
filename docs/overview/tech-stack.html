@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tech stack &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html" class="active">Tech stack</a></li>
+            <li><a href="../overview/decisions.html">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html">Public site</a></li>
+            <li><a href="../features/themes.html">Four themes</a></li>
+            <li><a href="../features/blog-posts.html">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html">All endpoints</a></li>
+            <li><a href="../api/data-model.html">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html">Native local setup</a></li>
+            <li><a href="../ops/environment.html">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / Overview / Tech stack</div>
+        <article>
+          <h1>Tech stack</h1>
+          <p class="lede">Exact versions, straight from <code>api/Gemfile</code>, <code>api/.ruby-version</code>, and <code>web/package.json</code>.</p>
+
+<h2>Backend</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Dependency</th>
+<th>Version</th>
+<th>Why it is here</th>
+</tr></thead>
+<tbody>
+<tr><td>Ruby</td><td>3.3.6 (<code>api/.ruby-version</code>)</td><td>Runtime; Docker image <code>ruby:3.3.6-slim</code></td></tr>
+<tr><td>Rails</td><td>~&gt; 8.1.3, &gt;= 8.1.3.1, API-only</td><td>Routing, JSON rendering, Active Record, Active Storage</td></tr>
+<tr><td>pg</td><td>~&gt; 1.1</td><td>PostgreSQL adapter</td></tr>
+<tr><td>puma</td><td>&gt;= 5.0</td><td>App server on port 3000</td></tr>
+<tr><td>jwt</td><td>latest</td><td>HS256 encode/decode of the admin token</td></tr>
+<tr><td>rack-cors</td><td>latest</td><td>Allows the Vite origin to call the API</td></tr>
+<tr><td>redcarpet</td><td>latest</td><td>Markdown &rarr; HTML for the RSS feed only</td></tr>
+<tr><td>dotenv-rails</td><td>latest</td><td>Loads <code>api/.env</code> in development/test</td></tr>
+<tr><td>image_processing</td><td>~&gt; 1.2</td><td>Active Storage variants (available, unused so far)</td></tr>
+<tr><td>solid_cache / solid_queue / solid_cable</td><td>latest</td><td>Rails 8 defaults, present but idle</td></tr>
+<tr><td>bootsnap, thruster, kamal</td><td>latest</td><td>Boot cache, HTTP accelerator, deploy tool (unconfigured)</td></tr>
+<tr><td>brakeman, bundler-audit, rubocop-rails-omakase, debug</td><td>dev/test</td><td>Security scan, gem audit, style, debugger</td></tr>
+</tbody></table></div>
+<h2>Frontend</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Dependency</th>
+<th>Version</th>
+<th>Why it is here</th>
+</tr></thead>
+<tbody>
+<tr><td>react / react-dom</td><td>18.3.1</td><td>UI runtime</td></tr>
+<tr><td>react-router-dom</td><td>6.30.6</td><td>Client-side routes incl. <code>/admin/*</code></td></tr>
+<tr><td>react-markdown</td><td>9.0.1</td><td>Renders post bodies and the editor preview</td></tr>
+<tr><td>remark-gfm</td><td>4.0.0</td><td>Tables, task lists, strikethrough in Markdown</td></tr>
+<tr><td>rehype-highlight + highlight.js</td><td>7.0.1 / 11.10.0</td><td>Code highlighting (<code>github-dark</code> stylesheet)</td></tr>
+<tr><td>vite</td><td>5.4.21</td><td>Dev server (<code>--host 0.0.0.0</code>) and production build</td></tr>
+<tr><td>typescript</td><td>5.6.3</td><td>Type checking; <code>npm run build</code> runs <code>tsc -b</code> first</td></tr>
+<tr><td>tailwindcss</td><td>3.4.16</td><td>Utility CSS mapped onto CSS variables per theme</td></tr>
+<tr><td>@tailwindcss/typography</td><td>0.5.15</td><td><code>prose</code> classes for rendered Markdown</td></tr>
+<tr><td>eslint 8.57.1 + prettier 3.4.2</td><td>dev</td><td>Lint (<code>--max-warnings 0</code>) and format</td></tr>
+</tbody></table></div>
+<h2>Infrastructure</h2>
+<ul>
+  <li><strong>PostgreSQL 16</strong> (<code>postgres:16-alpine</code>) with a <code>pg_isready</code>
+      healthcheck the API waits on.</li>
+  <li><strong>Node 20</strong> (<code>node:20-slim</code>) for the web container.</li>
+  <li><strong>GitHub Actions</strong> for the API only: <code>scan_ruby</code>, <code>lint</code>,
+      <code>test</code> (see <a href="../ops/ci-quality.html">CI</a>).</li>
+  <li><strong>Active Storage disk service</strong> &mdash; <code>local</code> in development,
+      <code>test</code> writes to <code>api/tmp/storage</code>.</li>
+</ul>
+
+<h2>Fonts and assets</h2>
+<p>The app's <code>web/index.html</code> pulls Inter, JetBrains Mono, Press Start 2P, Space Grotesk,
+and VT323 from Google Fonts. That is the app's only external dependency at runtime; these
+documentation pages deliberately use none.</p>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../overview/architecture.html">&larr; Architecture</a>
+        <a class="pager-link" href="../overview/decisions.html">Design decisions &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          var failed = function () { copy.textContent = "Copy failed"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done, failed); });
+          } else {
+            fallback(text, done, failed);
+          }
+        }
+      });
+
+      function fallback(text, done, failed) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { if (document.execCommand("copy")) { done(); } else { failed(); } } catch (error) { failed(); }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>

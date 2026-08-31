@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CI, tests &amp; linters &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html">Tech stack</a></li>
+            <li><a href="../overview/decisions.html">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html">Public site</a></li>
+            <li><a href="../features/themes.html">Four themes</a></li>
+            <li><a href="../features/blog-posts.html">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html">All endpoints</a></li>
+            <li><a href="../api/data-model.html">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html">Native local setup</a></li>
+            <li><a href="../ops/environment.html">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html" class="active">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / Operations / CI, tests &amp; linters</div>
+        <article>
+          <h1>CI, tests &amp; linters</h1>
+          <p class="lede">GitHub Actions covers the API. The frontend is linted but has no test runner.</p>
+
+<h2>GitHub Actions</h2>
+<p><code>api/.github/workflows/ci.yml</code> runs on every pull request and on pushes to
+<code>main</code>, with three jobs:</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Job</th>
+<th>Steps</th>
+<th>Notes</th>
+</tr></thead>
+<tbody>
+<tr><td><code>scan_ruby</code></td><td><code>bin/brakeman --no-pager</code>, <code>bin/bundler-audit</code></td><td>Static security analysis and a gem CVE audit</td></tr>
+<tr><td><code>lint</code></td><td><code>bin/rubocop -f github</code></td><td>Cached via <code>actions/cache</code> keyed on <code>.ruby-version</code>, rubocop config, and <code>Gemfile.lock</code></td></tr>
+<tr><td><code>test</code></td><td><code>bin/rails db:test:prepare test</code></td><td>Postgres service container, <code>DATABASE_URL=postgres://postgres:postgres@localhost:5432</code>, installs <code>libpq-dev libvips</code></td></tr>
+</tbody></table></div>
+<div class="note"><p>The workflow lives inside <code>api/</code>, so GitHub picks it up from
+<code>api/.github/workflows/</code> only if that directory is at the repository root for the checkout in
+question. In this monorepo the workflow file is committed under <code>api/</code> &mdash; worth verifying
+in the Actions tab before relying on it as a merge gate. Dependabot config sits next to it.</p></div>
+
+<h2>The local pipeline</h2>
+<p><code>api/bin/ci</code> uses <code>ActiveSupport::ContinuousIntegration</code> and is the fuller
+gate:</p>
+<pre data-lang="ruby"><code>step &quot;Setup&quot;,                            &quot;bin/setup --skip-server&quot;
+step &quot;Style: Ruby&quot;,                      &quot;bin/rubocop&quot;
+step &quot;Security: Gem audit&quot;,              &quot;bin/bundler-audit&quot;
+step &quot;Security: Brakeman code analysis&quot;, &quot;bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error&quot;
+step &quot;Tests: Rails&quot;,                     &quot;bin/rails test&quot;
+step &quot;Tests: Seeds&quot;,                     &quot;env RAILS_ENV=test bin/rails db:seed:replant&quot;</code></pre>
+<p>Note the extra seed step: it proves <code>db/seeds.rb</code> still runs cleanly from scratch.</p>
+
+<h2>Tests that exist</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>File</th>
+<th>Covers</th>
+</tr></thead>
+<tbody>
+<tr><td><code>api/test/integration/api_test.rb</code></td><td>Draft exclusion from lists; slug show returning Markdown; the editor round-trip preserving <code>published</code>/<code>published_at</code>; writes requiring auth; login success and failure; publishing stamping <code>published_at</code>; unpublish/republish keeping the original date; tag filtering; RSS rendering, HTML filtering, and CDATA escaping; upload rejecting SVG and accepting PNG by bytes</td></tr>
+<tr><td><code>api/test/controllers/feed_controller_test.rb</code></td><td>The <code>cdata</code> helper escaping <code>]]&gt;</code></td></tr>
+</tbody></table></div>
+<p>Run them with <code>bin/rails test</code> (or <code>docker compose exec api bin/rails test</code>).
+The suite sets <code>ADMIN_PASSWORD=test-password</code> and <code>SITE_URL</code> itself, and clears
+<code>Post</code> between examples.</p>
+
+<h2>Frontend quality</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Command</th>
+<th>What it does</th>
+</tr></thead>
+<tbody>
+<tr><td><code>npm run lint</code></td><td>ESLint over <code>ts,tsx</code> with <code>--max-warnings 0</code>, TypeScript + react-hooks + react-refresh rules, Prettier compatibility</td></tr>
+<tr><td><code>npm run format</code></td><td>Prettier writes <code>src/</code></td></tr>
+<tr><td><code>npm run build</code></td><td><code>tsc -b</code> then <code>vite build</code> &mdash; the de facto type check</td></tr>
+</tbody></table></div>
+<div class="warn"><p>There is no frontend test runner (no Vitest, no Playwright) and no CI job for
+<code>web/</code>. Frontend regressions are caught by <code>npm run build</code>, lint, and clicking
+around. That is the biggest gap in the quality setup.</p></div>
+
+<h2>Ruby style</h2>
+<p><code>api/.rubocop.yml</code> inherits <code>rubocop-rails-omakase</code> &mdash; the Rails-team
+defaults, deliberately unopinionated about line length. Autocorrect with <code>bin/rubocop -a</code>.</p>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../ops/environment.html">&larr; Environment variables</a>
+        <a class="pager-link" href="../ops/production.html">Production readiness &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          var failed = function () { copy.textContent = "Copy failed"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done, failed); });
+          } else {
+            fallback(text, done, failed);
+          }
+        }
+      });
+
+      function fallback(text, done, failed) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { if (document.execCommand("copy")) { done(); } else { failed(); } } catch (error) { failed(); }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>

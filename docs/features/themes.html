@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Four themes &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html">Tech stack</a></li>
+            <li><a href="../overview/decisions.html">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html">Public site</a></li>
+            <li><a href="../features/themes.html" class="active">Four themes</a></li>
+            <li><a href="../features/blog-posts.html">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html">All endpoints</a></li>
+            <li><a href="../api/data-model.html">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html">Native local setup</a></li>
+            <li><a href="../ops/environment.html">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / Features / Four themes</div>
+        <article>
+          <h1>Four themes</h1>
+          <p class="lede">Notion, Brutalist, Pixel, and Neon are complete component sets, not colour palettes.</p>
+
+<h2>How a theme is selected</h2>
+<ol>
+  <li><code>web/index.html</code> runs a tiny inline script before React boots: it reads
+      <code>localStorage.theme</code>, validates it against the four ids, and sets
+      <code>document.documentElement.dataset.theme</code>. This is what prevents a flash of the default
+      theme.</li>
+  <li><code>ThemeProvider</code> repeats that validation in React state, writes the choice back to
+      <code>localStorage</code>, and updates the <code>&lt;meta name="theme-color"&gt;</code> tag
+      (<code>#ffffff</code>, <code>#0a0a0a</code>, <code>#2b1b6b</code>, <code>#05060a</code>).</li>
+  <li>Pages call <code>useTheme()</code> and destructure the components they need, so no page contains
+      theme-specific markup.</li>
+</ol>
+
+<h2>The contract</h2>
+<p><code>web/src/themes/registry.ts</code> requires every theme to export six components:</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Component</th>
+<th>Props</th>
+<th>Used by</th>
+</tr></thead>
+<tbody>
+<tr><td><code>Shell</code></td><td><code>{ children, profile? }</code></td><td><code>PublicLayout</code> &mdash; header, nav, theme switcher, footer</td></tr>
+<tr><td><code>Hero</code></td><td><code>{ profile, postCount, tagCount }</code></td><td>Home</td></tr>
+<tr><td><code>TagCloud</code></td><td><code>{ tags, activeTag?, onSelect? }</code></td><td>Home (read-only) and Blog (interactive)</td></tr>
+<tr><td><code>PostList</code></td><td><code>{ posts }</code></td><td>Home and Blog</td></tr>
+<tr><td><code>PostCard</code></td><td><code>{ post, index? }</code></td><td>Inside each theme's own list</td></tr>
+<tr><td><code>ReaderChrome</code></td><td><code>{ post, children }</code></td><td>Post reader</td></tr>
+</tbody></table></div>
+<h2>The token system</h2>
+<p><code>web/src/styles/themes.css</code> defines one variable block per
+<code>[data-theme="&hellip;"]</code>; <code>web/tailwind.config.js</code> maps Tailwind names onto those
+variables. Writing <code>bg-surface text-fg border-border rounded-theme shadow-card</code> therefore
+produces different visuals per theme with identical markup.</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Token</th>
+<th>Tailwind name</th>
+<th>Notion</th>
+<th>Brutalist</th>
+<th>Pixel</th>
+<th>Neon</th>
+</tr></thead>
+<tbody>
+<tr><td><code>--color-bg</code></td><td><code>bg-bg</code></td><td><code>#ffffff</code></td><td><code>#0a0a0a</code></td><td><code>#2b1b6b</code></td><td><code>#05060a</code></td></tr>
+<tr><td><code>--color-accent</code></td><td><code>accent</code></td><td><code>#0075de</code></td><td><code>#ff3b00</code></td><td><code>#ff004d</code></td><td><code>#00fff0</code></td></tr>
+<tr><td><code>--font-display</code></td><td><code>font-display</code></td><td>Inter</td><td>JetBrains Mono</td><td>Press Start 2P</td><td>Space Grotesk</td></tr>
+<tr><td><code>--radius</code></td><td><code>rounded-theme</code></td><td>8px</td><td>0</td><td>0</td><td>&mdash;</td></tr>
+<tr><td><code>--shadow-card</code></td><td><code>shadow-card</code></td><td>layered soft shadow</td><td>none</td><td>6px 6px 0 #000</td><td>glow</td></tr>
+</tbody></table></div>
+<p>Also tokenised: <code>--space-section</code> (<code>py-section</code>) and the three font sizes
+<code>hero</code>, <code>page-title</code>, <code>section-title</code>, several of which use
+<code>clamp()</code> so the loud themes scale with the viewport. The typography plugin's
+<code>prose</code> colours are re-pointed at the same variables, which is why rendered Markdown always
+matches the theme.</p>
+
+<h2>The switcher</h2>
+<p><code>ThemeSwitcher.tsx</code> is a small listbox: <code>aria-haspopup</code>/<code>aria-expanded</code>
+on the button, <code>role="option"</code> with <code>aria-selected</code> on each item, arrow-key
+navigation, <kbd>Enter</kbd> to choose, <kbd>Escape</kbd> and outside-click (a
+<code>mousedown</code> listener on <code>document</code>) to close.</p>
+
+<h2>Adding a fifth theme</h2>
+<ol>
+  <li>Create <code>web/src/themes/&lt;id&gt;/index.tsx</code> exporting the six components.</li>
+  <li>Add a <code>[data-theme="&lt;id&gt;"]</code> variable block to <code>web/src/styles/themes.css</code>.</li>
+  <li>Add the id to <code>THEME_IDS</code>, a label to <code>THEME_LABELS</code>, and the components to
+      <code>registry</code>.</li>
+  <li>Add its background colour to <code>themeColors</code> in <code>ThemeProvider.tsx</code> and to
+      the bootstrap array in <code>web/index.html</code> &mdash; miss the second one and a reload
+      briefly shows Notion.</li>
+</ol>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../features/public-site.html">&larr; Public site</a>
+        <a class="pager-link" href="../features/blog-posts.html">Writing &amp; publishing &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          var failed = function () { copy.textContent = "Copy failed"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done, failed); });
+          } else {
+            fallback(text, done, failed);
+          }
+        }
+      });
+
+      function fallback(text, done, failed) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { if (document.execCommand("copy")) { done(); } else { failed(); } } catch (error) { failed(); }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>

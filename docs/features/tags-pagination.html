@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tags &amp; pagination &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html">Tech stack</a></li>
+            <li><a href="../overview/decisions.html">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html">Public site</a></li>
+            <li><a href="../features/themes.html">Four themes</a></li>
+            <li><a href="../features/blog-posts.html">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html" class="active">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html">All endpoints</a></li>
+            <li><a href="../api/data-model.html">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html">Native local setup</a></li>
+            <li><a href="../ops/environment.html">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / Features / Tags &amp; pagination</div>
+        <article>
+          <h1>Tags &amp; pagination</h1>
+          <p class="lede">How tags are stored, counted, and filtered &mdash; and how paging behaves at the edges.</p>
+
+<h2>Tags</h2>
+<ul>
+  <li>Stored on the post row: <code>tags string[] NOT NULL DEFAULT []</code>, GIN-indexed
+      (<code>index_posts_on_tags</code>).</li>
+  <li>The editor lowercases and de-duplicates before saving; nothing enforces that server-side, so a
+      console write can create <code>Ruby</code> and <code>ruby</code> as separate tags.</li>
+  <li>Filtering: <code>scope :by_tag, ->(tag) { where("? = ANY(tags)", tag.to_s.downcase) }</code>
+      &mdash; exact match on the lowercased input, applied only when <code>params[:tag]</code> is
+      present.</li>
+  <li>The cloud: <code>Post.published.where.not(tags: []).pluck(:tags).flatten.tally</code>, sorted
+      alphabetically, returned as <code>{ tag, count }</code>. Drafts never contribute.</li>
+</ul>
+
+<h3>Counting happens in Ruby</h3>
+<p><code>GET /api/v1/tags</code> loads the tag arrays of every published post and tallies them in
+process. Fine for a personal blog; it is the first thing to move into SQL if the archive ever gets
+large.</p>
+
+<h2>Pagination</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Parameter</th>
+<th>Default</th>
+<th>Clamping</th>
+<th>Notes</th>
+</tr></thead>
+<tbody>
+<tr><td><code>page</code></td><td>1</td><td>Non-integer or &le;&nbsp;0 &rarr; 1</td><td>Offset is <code>(page - 1) * per_page</code></td></tr>
+<tr><td><code>per_page</code></td><td>10</td><td>Capped at 100, floored at 1</td><td>The frontend asks for 3 on the home page and 10 on the archive</td></tr>
+</tbody></table></div>
+<p><code>meta</code> is returned with every list:</p>
+<pre data-lang="json"><code>{ &quot;page&quot;: 2, &quot;per_page&quot;: 10, &quot;total&quot;: 14, &quot;total_pages&quot;: 2 }</code></pre>
+<ul>
+  <li><code>total</code> counts the filtered set (so it shrinks when <code>tag</code> is applied) and
+      is computed <em>before</em> the offset/limit.</li>
+  <li><code>total_pages</code> is <code>(total / per_page.to_f).ceil</code>.</li>
+  <li>A page past the end returns an empty <code>posts</code> array with valid <code>meta</code> &mdash;
+      not a 404.</li>
+  <li>The UI hides the pager entirely when <code>total_pages &le; 1</code> and disables the edge
+      buttons, so you cannot walk off either end by clicking.</li>
+</ul>
+
+<h2>URL behaviour</h2>
+<p>The archive keeps its state in the query string: <code>/blog?tag=ruby&amp;page=2</code>. Picking a
+tag replaces the params (dropping <code>page</code>), while the pager preserves the active tag. Both are
+therefore bookmarkable and reload-safe.</p>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../features/covers-uploads.html">&larr; Covers &amp; uploads</a>
+        <a class="pager-link" href="../features/profile-about.html">Profile &amp; About page &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          var failed = function () { copy.textContent = "Copy failed"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done, failed); });
+          } else {
+            fallback(text, done, failed);
+          }
+        }
+      });
+
+      function fallback(text, done, failed) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { if (document.execCommand("copy")) { done(); } else { failed(); } } catch (error) { failed(); }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>

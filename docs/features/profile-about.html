@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Profile &amp; About page &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html">Tech stack</a></li>
+            <li><a href="../overview/decisions.html">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html">Public site</a></li>
+            <li><a href="../features/themes.html">Four themes</a></li>
+            <li><a href="../features/blog-posts.html">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html" class="active">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html">All endpoints</a></li>
+            <li><a href="../api/data-model.html">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html">Native local setup</a></li>
+            <li><a href="../ops/environment.html">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / Features / Profile &amp; About page</div>
+        <article>
+          <h1>Profile &amp; About page</h1>
+          <p class="lede">Your name, bio, links, and skills come from one YAML file &mdash; no database, no admin screen.</p>
+
+<h2>The file</h2>
+<p><code>api/config/profile.yml</code> is read on every request to <code>GET /api/v1/profile</code> and
+returned as JSON verbatim:</p>
+<pre data-lang="yaml"><code>name: Karol
+headline: Software engineer who enjoys making complex systems feel simple
+bio:
+  - I am Karol, a software engineer interested in the small decisions that make software pleasant to work with.
+  - This is where I write about Ruby, web architecture, testing, and the lessons that come from shipping products.
+avatar_url: /covers/avatar.svg
+location: Europe
+links:
+  - label: GitHub
+    url: https://github.com/
+  - label: LinkedIn
+    url: https://www.linkedin.com/
+skills:
+  - Ruby
+  - Rails
+  - React
+  - PostgreSQL
+  - Testing</code></pre>
+<h2>Where each field shows up</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Field</th>
+<th>Type</th>
+<th>Used by</th>
+</tr></thead>
+<tbody>
+<tr><td><code>name</code></td><td>string</td><td>About heading, avatar alt text, theme headers/heroes</td></tr>
+<tr><td><code>headline</code></td><td>string</td><td>About subtitle and the hero on <code>/</code></td></tr>
+<tr><td><code>bio</code></td><td>list of strings</td><td>About page paragraphs (one <code>&lt;p&gt;</code> each; the text is the React key, so keep them distinct)</td></tr>
+<tr><td><code>avatar_url</code></td><td>string</td><td>About avatar, resolved against the API host if relative</td></tr>
+<tr><td><code>location</code></td><td>string</td><td>&ldquo;Based in &hellip;&rdquo; line on About</td></tr>
+<tr><td><code>links</code></td><td>list of <code>{label, url}</code></td><td>&ldquo;Find me online&rdquo;, opened with <code>target="_blank" rel="noreferrer"</code></td></tr>
+<tr><td><code>skills</code></td><td>list of strings</td><td>Skill chips on About</td></tr>
+</tbody></table></div>
+<h2>Editing it</h2>
+<ol>
+  <li>Edit <code>api/config/profile.yml</code>.</li>
+  <li>No restart is needed &mdash; the controller calls <code>YAML.load_file</code> per request. Reload
+      the About page.</li>
+  <li>Keep the keys and shapes: the frontend's <code>Profile</code> type expects all seven fields, and
+      <code>bio</code>, <code>links</code>, <code>skills</code> must be lists.</li>
+</ol>
+
+<div class="warn"><p>The endpoint is public and returns the whole file, so nothing private belongs in
+it. It is also unguarded against a malformed file: broken YAML raises and the About page shows an error
+state. <code>permitted_classes: [Symbol]</code> is the only extra type allowed by the loader.</p></div>
+
+<h2>Replacing the avatar</h2>
+<p>Drop a file into <code>api/public/covers/</code> and point <code>avatar_url</code> at
+<code>/covers/&lt;file&gt;</code>, or use any absolute URL. There is no image processing in this path
+&mdash; the file is served as-is at its natural size and cropped by CSS
+(<code>h-32 w-32 object-cover</code>).</p>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../features/tags-pagination.html">&larr; Tags &amp; pagination</a>
+        <a class="pager-link" href="../features/rss-feed.html">RSS feed &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          var failed = function () { copy.textContent = "Copy failed"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done, failed); });
+          } else {
+            fallback(text, done, failed);
+          }
+        }
+      });
+
+      function fallback(text, done, failed) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { if (document.execCommand("copy")) { done(); } else { failed(); } } catch (error) { failed(); }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>

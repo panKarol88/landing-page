@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>How the JWT auth works &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html">Tech stack</a></li>
+            <li><a href="../overview/decisions.html">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html">Public site</a></li>
+            <li><a href="../features/themes.html">Four themes</a></li>
+            <li><a href="../features/blog-posts.html">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html" class="active">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html">All endpoints</a></li>
+            <li><a href="../api/data-model.html">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html">Native local setup</a></li>
+            <li><a href="../ops/environment.html">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / Authorization / How the JWT auth works</div>
+        <article>
+          <h1>How the JWT auth works</h1>
+          <p class="lede">The token, the guard, the failure modes, and what this scheme deliberately does not do.</p>
+
+<h2>Issuing</h2>
+<pre data-lang="ruby"><code># api/app/controllers/api/v1/session_controller.rb
+password = params.require(:password).to_s
+expected = ENV.fetch(&quot;ADMIN_PASSWORD&quot;, &quot;&quot;)
+valid = expected.present? &amp;&amp;
+  ActiveSupport::SecurityUtils.secure_compare(
+    Digest::SHA256.hexdigest(password), Digest::SHA256.hexdigest(expected)
+  )
+return render json: { error: &quot;Invalid password&quot; }, status: :unauthorized unless valid
+
+payload = { admin: true, exp: 7.days.from_now.to_i }
+render json: { token: JWT.encode(payload, Api::Security.jwt_secret, &quot;HS256&quot;) }</code></pre>
+<ul>
+  <li>Hashing both sides first makes <code>secure_compare</code> safe for different-length inputs and
+      keeps the comparison constant-time.</li>
+  <li>The payload is minimal: <code>{ "admin": true, "exp": &lt;unix ts&gt; }</code>. No identity, no
+      jti, no issued-at, no refresh token.</li>
+  <li>Algorithm is HS256 with <code>JWT_SECRET</code> as the shared key.</li>
+</ul>
+
+<h2>Verifying</h2>
+<pre data-lang="ruby"><code># api/app/controllers/concerns/admin_authentication.rb
+def current_admin?
+  token = request.headers[&quot;Authorization&quot;].to_s.delete_prefix(&quot;Bearer &quot;).strip
+  return false if token.blank?
+
+  payload, = JWT.decode(token, jwt_secret, true, { algorithm: &quot;HS256&quot; })
+  payload[&quot;admin&quot;] == true &amp;&amp; payload[&quot;exp&quot;].to_i &gt; Time.current.to_i
+rescue JWT::DecodeError, JWT::ExpiredSignature, JWT::VerificationError
+  false
+end</code></pre>
+<p>Verification is explicit (<code>true</code> plus a pinned algorithm), so an <code>alg: none</code>
+token is rejected. The expiry is checked twice &mdash; once by the library, once by hand. Any decode
+failure is swallowed into <code>false</code>, which becomes
+<code>401 {"error":"Authentication required"}</code> from <code>authenticate_admin!</code>.</p>
+
+<h2>Which endpoints are guarded</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Endpoint</th>
+<th>Guard</th>
+</tr></thead>
+<tbody>
+<tr><td><code>POST /api/v1/posts</code></td><td><code>authenticate_admin!</code></td></tr>
+<tr><td><code>PATCH/PUT /api/v1/posts/:slug</code></td><td><code>authenticate_admin!</code></td></tr>
+<tr><td><code>DELETE /api/v1/posts/:slug</code></td><td><code>authenticate_admin!</code></td></tr>
+<tr><td><code>GET /api/v1/admin/posts</code></td><td><code>authenticate_admin!</code> (whole controller)</td></tr>
+<tr><td><code>POST /api/v1/uploads</code></td><td><code>authenticate_admin!</code></td></tr>
+<tr><td><code>GET /api/v1/posts/:slug</code></td><td>Public, but drafts require <code>current_admin?</code> or they 404</td></tr>
+<tr><td><code>GET /api/v1/posts</code>, <code>/tags</code>, <code>/profile</code>, <code>/feed.xml</code>, <code>/up</code></td><td>Public</td></tr>
+<tr><td><code>POST /api/v1/session</code></td><td>Public, rate-limited</td></tr>
+</tbody></table></div>
+<h2>The secret</h2>
+<pre data-lang="ruby"><code># api/config/initializers/security.rb
+module Api
+  module Security
+    def self.jwt_secret
+      ENV.fetch(&quot;JWT_SECRET&quot;) { raise &quot;JWT_SECRET must be configured before using admin authentication&quot; }
+    end
+  end
+end</code></pre>
+<p>There is no fallback and no default: a missing <code>JWT_SECRET</code> raises the first time any auth
+path is exercised (a 500 on login, not a silent insecure mode). Rotating it invalidates every existing
+token immediately.</p>
+
+<h2>Client side</h2>
+<ul>
+  <li>Stored as <code>localStorage.admin_token</code>; sent as <code>Authorization: Bearer &lt;token&gt;</code>
+      by <code>web/src/api/client.ts</code>.</li>
+  <li><code>UnauthorizedError</code> is thrown for any <code>401</code>; every admin screen reacts by
+      deleting the token and redirecting to <code>/admin/login</code>.</li>
+  <li><code>ProtectedAdmin</code> only checks for a non-empty string, so the guard is UX, not security
+      &mdash; the API is what actually says no.</li>
+  <li>The token is not refreshed. On day eight you are simply asked to sign in again.</li>
+</ul>
+
+<h2>Known limitations</h2>
+<ul>
+  <li>No revocation list: a leaked token is valid for up to 7 days unless <code>JWT_SECRET</code>
+      changes.</li>
+  <li><code>localStorage</code> is script-readable; an XSS bug would expose the token. The site renders
+      only your own Markdown, which keeps that surface small.</li>
+  <li>No CSRF machinery is needed because auth is a header, not a cookie.</li>
+  <li>CORS is limited to the two localhost origins, so a hostile page cannot call the API from a
+      browser with your token &mdash; until the allowlist grows.</li>
+</ul>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../auth/dashboard-login.html">&larr; Logging into the dashboard</a>
+        <a class="pager-link" href="../api/endpoints.html">All endpoints &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          var failed = function () { copy.textContent = "Copy failed"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done, failed); });
+          } else {
+            fallback(text, done, failed);
+          }
+        }
+      });
+
+      function fallback(text, done, failed) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { if (document.execCommand("copy")) { done(); } else { failed(); } } catch (error) { failed(); }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>

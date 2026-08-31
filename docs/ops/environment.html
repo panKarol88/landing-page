@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Environment variables &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html">Tech stack</a></li>
+            <li><a href="../overview/decisions.html">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html">Public site</a></li>
+            <li><a href="../features/themes.html">Four themes</a></li>
+            <li><a href="../features/blog-posts.html">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html">All endpoints</a></li>
+            <li><a href="../api/data-model.html">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html">Native local setup</a></li>
+            <li><a href="../ops/environment.html" class="active">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / Operations / Environment variables</div>
+        <article>
+          <h1>Environment variables</h1>
+          <p class="lede">Every variable the app reads, its default, and where to set it.</p>
+
+<h2>The complete list</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Variable</th>
+<th>Read by</th>
+<th>Default</th>
+<th>Effect if wrong</th>
+</tr></thead>
+<tbody>
+<tr><td><code>ADMIN_PASSWORD</code></td><td><code>SessionController#create</code></td><td>none (<code>""</code>); Compose passes <code>change-me</code></td><td>Empty means every login attempt fails</td></tr>
+<tr><td><code>JWT_SECRET</code></td><td><code>Api::Security.jwt_secret</code></td><td>none; Compose passes <code>local-development-jwt-secret-change-me</code></td><td>Unset raises &rarr; 500 on any auth path; changing it invalidates all tokens</td></tr>
+<tr><td><code>SITE_URL</code></td><td><code>FeedController</code></td><td><code>http://localhost:5173</code></td><td>Wrong feed links and guids</td></tr>
+<tr><td><code>VITE_API_URL</code></td><td><code>web/src/api/client.ts</code> at build time</td><td><code>http://localhost:3000</code></td><td>Frontend calls the wrong host; every request fails</td></tr>
+<tr><td><code>DATABASE_URL</code></td><td>Rails / Active Record</td><td>unset natively (uses <code>database.yml</code> + socket)</td><td>Compose sets it to the <code>db</code> service</td></tr>
+<tr><td><code>RAILS_ENV</code></td><td>Rails</td><td><code>development</code></td><td>Compose pins <code>development</code>; CI uses <code>test</code></td></tr>
+<tr><td><code>RAILS_MAX_THREADS</code></td><td><code>database.yml</code> pool size</td><td>5</td><td>Connection pool starvation under load</td></tr>
+<tr><td><code>API_DATABASE_PASSWORD</code></td><td><code>database.yml</code> production block</td><td>unset</td><td>Only relevant to a real production deploy</td></tr>
+</tbody></table></div>
+<h2>Where to put them</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Context</th>
+<th>File</th>
+<th>Committed?</th>
+</tr></thead>
+<tbody>
+<tr><td>Docker Compose</td><td><code>./.env</code> (template: <code>.env.example</code>)</td><td>No &mdash; only the example is</td></tr>
+<tr><td>Native API</td><td><code>api/.env</code> (template: <code>api/.env.example</code>)</td><td>No</td></tr>
+<tr><td>Native frontend</td><td><code>web/.env</code> (template: <code>web/.env.example</code>)</td><td>No</td></tr>
+<tr><td>Tests</td><td>Set in <code>api/test/integration/api_test.rb</code> setup</td><td>Yes (test values)</td></tr>
+</tbody></table></div>
+<pre data-lang="dotenv"><code># ./.env  (root, used by docker compose)
+ADMIN_PASSWORD=change-me
+JWT_SECRET=local-development-jwt-secret-change-me
+SITE_URL=http://localhost:5173
+VITE_API_URL=http://localhost:3000</code></pre>
+
+<h2>Notes that bite</h2>
+<ul>
+  <li><strong>Vite variables are compile-time.</strong> Changing <code>VITE_API_URL</code> requires
+      restarting the dev server (or rebuilding); it is not read at runtime by the browser.</li>
+  <li><strong><code>dotenv-rails</code> only loads in development and test.</strong> A production run
+      must get real environment variables.</li>
+  <li><strong>Rotating <code>JWT_SECRET</code> is the logout button.</strong> It is the only way to
+      invalidate issued tokens.</li>
+  <li><strong>Generate secrets, do not invent them:</strong>
+      <code>ruby -rsecurerandom -e 'puts SecureRandom.hex(64)'</code>.</li>
+  <li><strong>Filtered from logs:</strong> <code>filter_parameter_logging.rb</code> redacts
+      <code>passw</code>, <code>secret</code>, <code>token</code>, <code>_key</code>, <code>crypt</code>,
+      <code>salt</code>, <code>certificate</code>, <code>otp</code>, <code>ssn</code>, and
+      <code>cvv</code> patterns, so the login password does not land in <code>log/development.log</code>.</li>
+  <li><strong>CORS is not an env var.</strong> The allowed origins are hard-coded in
+      <code>api/config/initializers/cors.rb</code>; a new frontend origin means a code change.</li>
+</ul>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../ops/local-setup.html">&larr; Native local setup</a>
+        <a class="pager-link" href="../ops/ci-quality.html">CI, tests &amp; linters &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          var failed = function () { copy.textContent = "Copy failed"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done, failed); });
+          } else {
+            fallback(text, done, failed);
+          }
+        }
+      });
+
+      function fallback(text, done, failed) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { if (document.execCommand("copy")) { done(); } else { failed(); } } catch (error) { failed(); }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>

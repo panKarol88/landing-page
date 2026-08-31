@@ -170,6 +170,7 @@ docker compose stop api
 docker compose exec -T db dropdb -U postgres --force api_development
 docker compose exec -T db createdb -U postgres api_development
 docker compose exec -T db psql -U postgres api_development < backup.sql
+docker compose run --rm --no-deps -T api tar -xzf - -C /rails < uploads.tgz
 docker compose start api</code></pre>
 <p><code>storage</code> is a named Docker volume mounted over <code>api/storage</code>, so the archive has to
 be taken from inside the container &mdash; the host directory looks empty.</p>

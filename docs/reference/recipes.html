@@ -170,10 +170,15 @@ docker compose stop api
 docker compose exec -T db dropdb -U postgres --force api_development
 docker compose exec -T db createdb -U postgres api_development
 docker compose exec -T db psql -U postgres api_development < backup.sql
-docker compose run --rm --no-deps -T api tar -xzf - -C /rails < uploads.tgz
+docker compose run --rm --no-deps -T --entrypoint tar api -xzf - -C /rails < uploads.tgz
 docker compose start api</code></pre>
 <p><code>storage</code> is a named Docker volume mounted over <code>api/storage</code>, so the archive has to
-be taken from inside the container &mdash; the host directory looks empty.</p>
+be taken from inside the container &mdash; the host directory looks empty. The extraction overrides the
+entrypoint because <code>bin/docker-dev-entrypoint</code> runs <code>db:prepare</code> and
+<code>db:seed</code> before the given command.</p>
+<div class="note"><p>Every API start re-runs <code>db:seed</code>, which reassigns the seeded posts by slug.
+Edits you made to a seeded post are overwritten on the next start, restore or not; posts you wrote
+yourself are untouched.</p></div>
 
 <h2>Run every check</h2>
 <pre data-lang="sh"><code>docker compose exec api bin/ci                 # style + security + tests + seeds

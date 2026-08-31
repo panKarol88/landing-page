@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>File map &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html">Tech stack</a></li>
+            <li><a href="../overview/decisions.html">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html">Public site</a></li>
+            <li><a href="../features/themes.html">Four themes</a></li>
+            <li><a href="../features/blog-posts.html">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html">All endpoints</a></li>
+            <li><a href="../api/data-model.html">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html">Native local setup</a></li>
+            <li><a href="../ops/environment.html">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html" class="active">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / Reference / File map</div>
+        <article>
+          <h1>File map</h1>
+          <p class="lede">Where everything lives, so you never have to grep from scratch.</p>
+
+<h2>Repository root</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Path</th>
+<th>What it is</th>
+</tr></thead>
+<tbody>
+<tr><td><code>README.md</code></td><td>Quick start for Docker and native runs</td></tr>
+<tr><td><code>docker-compose.yml</code></td><td>The three-service development stack</td></tr>
+<tr><td><code>.env.example</code></td><td>Template for the Compose variables</td></tr>
+<tr><td><code>bin/dev</code></td><td>Runs API + frontend natively in one terminal</td></tr>
+<tr><td><code>Procfile.dev</code></td><td>The same two processes for a Procfile runner</td></tr>
+<tr><td><code>scripts/setup.md</code></td><td>Native toolchain installation (Ruby, Postgres)</td></tr>
+<tr><td><code>docs/</code></td><td>This documentation site</td></tr>
+<tr><td><code>api/</code></td><td>Rails 8 API-only backend</td></tr>
+<tr><td><code>web/</code></td><td>Vite + React + TypeScript frontend</td></tr>
+</tbody></table></div>
+<h2><code>api/</code></h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Path</th>
+<th>What it is</th>
+</tr></thead>
+<tbody>
+<tr><td><code>config/routes.rb</code></td><td>All routes &mdash; the map of the API</td></tr>
+<tr><td><code>app/controllers/application_controller.rb</code></td><td>Error &rarr; status mapping, validation helper</td></tr>
+<tr><td><code>app/controllers/concerns/admin_authentication.rb</code></td><td><code>authenticate_admin!</code> and <code>current_admin?</code></td></tr>
+<tr><td><code>app/controllers/api/v1/posts_controller.rb</code></td><td>Public list/show + admin create/update/destroy, pagination, serialization</td></tr>
+<tr><td><code>app/controllers/api/v1/admin/posts_controller.rb</code></td><td>Dashboard listing with <code>?status=</code></td></tr>
+<tr><td><code>app/controllers/api/v1/session_controller.rb</code></td><td>Password check, JWT issuing, rate limit</td></tr>
+<tr><td><code>app/controllers/api/v1/uploads_controller.rb</code></td><td>Multipart upload, size cap, magic-byte sniffing</td></tr>
+<tr><td><code>app/controllers/api/v1/tags_controller.rb</code></td><td>Tag tally</td></tr>
+<tr><td><code>app/controllers/api/v1/profile_controller.rb</code></td><td>Serves <code>config/profile.yml</code></td></tr>
+<tr><td><code>app/controllers/feed_controller.rb</code></td><td>RSS 2.0 rendering with Redcarpet</td></tr>
+<tr><td><code>app/models/post.rb</code></td><td>Validations, slug generation, <code>published_at</code> rule, scopes, reading time</td></tr>
+<tr><td><code>config/initializers/security.rb</code></td><td><code>JWT_SECRET</code> accessor that raises when unset</td></tr>
+<tr><td><code>config/initializers/cors.rb</code></td><td>Allowed frontend origins</td></tr>
+<tr><td><code>config/profile.yml</code></td><td>Your name, bio, links, skills</td></tr>
+<tr><td><code>db/schema.rb</code>, <code>db/migrate/</code></td><td>Schema and the two migrations</td></tr>
+<tr><td><code>db/seeds.rb</code></td><td>14 demo posts, idempotent by title</td></tr>
+<tr><td><code>public/covers/</code></td><td>Bundled SVG covers and the avatar</td></tr>
+<tr><td><code>storage/</code></td><td>Active Storage disk service (uploads)</td></tr>
+<tr><td><code>test/integration/api_test.rb</code></td><td>The main test suite</td></tr>
+<tr><td><code>bin/ci</code></td><td>Local style + security + test pipeline</td></tr>
+<tr><td><code>Dockerfile.dev</code> / <code>Dockerfile</code></td><td>Development image / stock production image</td></tr>
+<tr><td><code>bin/docker-dev-entrypoint</code></td><td>bundle check, <code>db:prepare</code>, <code>db:seed</code>, then Puma</td></tr>
+<tr><td><code>config/deploy.yml</code>, <code>.kamal/</code></td><td>Unconfigured Kamal scaffolding</td></tr>
+</tbody></table></div>
+<h2><code>web/</code></h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Path</th>
+<th>What it is</th>
+</tr></thead>
+<tbody>
+<tr><td><code>index.html</code></td><td>SPA shell, Google Fonts, pre-boot theme script</td></tr>
+<tr><td><code>src/main.tsx</code></td><td>Router, route table, <code>ProtectedAdmin</code> guard</td></tr>
+<tr><td><code>src/api/client.ts</code></td><td>Every HTTP call, <code>API_URL</code>, <code>UnauthorizedError</code>, <code>resolveAssetUrl</code></td></tr>
+<tr><td><code>src/types.ts</code></td><td><code>Post</code>, <code>Profile</code>, <code>Tag</code>, <code>Meta</code>, <code>formatDate</code></td></tr>
+<tr><td><code>src/pages/Home.tsx</code></td><td>Hero + latest three + tag cloud</td></tr>
+<tr><td><code>src/pages/Blog.tsx</code></td><td>Archive, tag filter, pager</td></tr>
+<tr><td><code>src/pages/PostReader.tsx</code></td><td>Single post</td></tr>
+<tr><td><code>src/pages/About.tsx</code></td><td>Profile page</td></tr>
+<tr><td><code>src/pages/PublicLayout.tsx</code></td><td>Wraps public routes in the theme <code>Shell</code></td></tr>
+<tr><td><code>src/pages/NotFound.tsx</code></td><td>404</td></tr>
+<tr><td><code>src/pages/admin/AdminLogin.tsx</code></td><td>Password form, token storage</td></tr>
+<tr><td><code>src/pages/admin/AdminLayout.tsx</code></td><td>Admin chrome and sign-out</td></tr>
+<tr><td><code>src/pages/admin/AdminDashboard.tsx</code></td><td>Post table, status tabs, publish/delete</td></tr>
+<tr><td><code>src/pages/admin/PostEditor.tsx</code></td><td>Editor, slug logic, tags, upload, live preview, save modes</td></tr>
+<tr><td><code>src/components/ThemeProvider.tsx</code></td><td>Theme state, persistence, <code>theme-color</code></td></tr>
+<tr><td><code>src/components/ThemeSwitcher.tsx</code></td><td>Accessible theme listbox</td></tr>
+<tr><td><code>src/components/Markdown.tsx</code></td><td>react-markdown + GFM + highlight</td></tr>
+<tr><td><code>src/components/States.tsx</code></td><td>Loading spinner and error panel</td></tr>
+<tr><td><code>src/themes/registry.ts</code></td><td>Theme ids, labels, component contract</td></tr>
+<tr><td><code>src/themes/{notion,brutalist,pixel,neon}/index.tsx</code></td><td>The four theme implementations</td></tr>
+<tr><td><code>src/styles/themes.css</code></td><td>Tailwind layers + per-theme CSS variables</td></tr>
+<tr><td><code>tailwind.config.js</code></td><td>Maps Tailwind names onto those variables</td></tr>
+<tr><td><code>Dockerfile.dev</code>, <code>bin/docker-dev-entrypoint</code></td><td>Dev image and lock-hash <code>npm ci</code></td></tr>
+</tbody></table></div>
+<h2><code>docs/</code> (this site)</h2>
+<pre data-lang="tree"><code>docs/
+  index.html            entry point &mdash; open this
+  assets/docs.css       the only stylesheet
+  overview/             architecture, tech-stack, decisions
+  features/             public-site, themes, blog-posts, covers-uploads,
+                        tags-pagination, profile-about, rss-feed
+  auth/                 dashboard-login, jwt-internals
+  api/                  endpoints, data-model, errors
+  ops/                  docker, local-setup, environment, ci-quality, production
+  reference/            file-map, recipes, troubleshooting</code></pre>
+<p>Every page is self-contained HTML with its JavaScript inline; links are relative, so the folder works
+from <code>file://</code>, a USB stick, or any static host.</p>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../ops/production.html">&larr; Production readiness</a>
+        <a class="pager-link" href="../reference/recipes.html">Recipes &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+          } else {
+            fallback(text, done);
+          }
+        }
+      });
+
+      function fallback(text, done) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { document.execCommand("copy"); done(); } catch (error) { /* ignore */ }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>

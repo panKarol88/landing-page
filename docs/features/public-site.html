@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Public site &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html">Tech stack</a></li>
+            <li><a href="../overview/decisions.html">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html" class="active">Public site</a></li>
+            <li><a href="../features/themes.html">Four themes</a></li>
+            <li><a href="../features/blog-posts.html">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html">All endpoints</a></li>
+            <li><a href="../api/data-model.html">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html">Native local setup</a></li>
+            <li><a href="../ops/environment.html">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / Features / Public site</div>
+        <article>
+          <h1>Public site</h1>
+          <p class="lede">Four public routes, all client-rendered, all fed by the JSON API.</p>
+
+<h2>Routes</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Route</th>
+<th>Component</th>
+<th>What it does</th>
+</tr></thead>
+<tbody>
+<tr><td><code>/</code></td><td><code>web/src/pages/Home.tsx</code></td><td>Theme hero (profile, post count, tag count), the 3 newest published posts, tag cloud</td></tr>
+<tr><td><code>/blog</code></td><td><code>Blog.tsx</code></td><td>Full archive, 10 per page, tag filter and pager driven by <code>?tag=</code> and <code>?page=</code></td></tr>
+<tr><td><code>/blog/:slug</code></td><td><code>PostReader.tsx</code></td><td>One post inside the theme's <code>ReaderChrome</code>, body rendered as Markdown</td></tr>
+<tr><td><code>/about</code></td><td><code>About.tsx</code></td><td>Avatar, name, headline, location, bio paragraphs, skills, external links</td></tr>
+<tr><td><code>*</code></td><td><code>NotFound.tsx</code></td><td>404 panel with a link home</td></tr>
+</tbody></table></div>
+<h2>Home page</h2>
+<p>One <code>Promise.all([getProfile(), listPosts({perPage: 3}), getTags()])</code> populates
+everything. <code>postCount</code> comes from <code>meta.total</code> (all published posts, not the
+three shown) and <code>tagCount</code> is the length of the tag list. If any of the three requests
+fails, the whole page renders <code>ErrorState</code> with the API's message; while they are in flight
+it renders a spinner (<code>LoadingState</code>).</p>
+
+<h2>Blog archive</h2>
+<ul>
+  <li>Page size is fixed at 10 in the frontend call; the API accepts <code>per_page</code> up to 100.</li>
+  <li>The tag filter writes <code>?tag=ruby</code> into the URL, so a filtered archive is shareable and
+      survives reload. Selecting a tag resets pagination (the params object is replaced, not merged).</li>
+  <li>Pager buttons appear only when <code>meta.total_pages &gt; 1</code>; &laquo;Newer&raquo; is
+      disabled on page 1 and &laquo;Older&raquo; on the last page.</li>
+  <li>A non-numeric or negative <code>?page=</code> falls back to 1 on both sides.</li>
+  <li>A failed tag request shows its own inline error without blanking the post list.</li>
+</ul>
+
+<h2>Post reader</h2>
+<p><code>GET /api/v1/posts/:slug</code> is called without a token, so an unpublished post 404s here
+even if you are logged in in another tab &mdash; previewing a draft happens in the editor. The body is
+Markdown with GFM tables and highlighted code blocks; the surrounding chrome (cover image, date,
+reading time, tags, back link) is supplied by the active theme.</p>
+
+<h2>Shared UI states</h2>
+<p><code>web/src/components/States.tsx</code> has exactly two: a spinner with a
+&ldquo;Loading&hellip;&rdquo; label and an error panel that shows the message and, when a retry
+callback is given, a &ldquo;Try again&rdquo; button. Error text comes from the API's
+<code>error</code> field, or the generic
+&ldquo;Something went wrong. Please try again.&rdquo; when the response has no message.</p>
+
+<h2>Asset URLs</h2>
+<p><code>resolveAssetUrl()</code> leaves absolute URLs alone and prefixes relative ones with
+<code>API_URL</code>. That is why the seeded covers (<code>/covers/sunset.svg</code>) and the avatar
+(<code>/covers/avatar.svg</code>) resolve against the Rails app, which serves them from
+<code>api/public/covers/</code>.</p>
+
+<h2>Reading time</h2>
+<p>Computed server-side in <code>Post#reading_time_minutes</code>: whitespace-separated words divided
+by 200, rounded up, minimum 1. It is part of every serialized post, so all themes show the same number.</p>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../overview/decisions.html">&larr; Design decisions</a>
+        <a class="pager-link" href="../features/themes.html">Four themes &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+          } else {
+            fallback(text, done);
+          }
+        }
+      });
+
+      function fallback(text, done) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { document.execCommand("copy"); done(); } catch (error) { /* ignore */ }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>

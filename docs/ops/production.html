@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Production readiness &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html">Tech stack</a></li>
+            <li><a href="../overview/decisions.html">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html">Public site</a></li>
+            <li><a href="../features/themes.html">Four themes</a></li>
+            <li><a href="../features/blog-posts.html">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html">All endpoints</a></li>
+            <li><a href="../api/data-model.html">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html">Native local setup</a></li>
+            <li><a href="../ops/environment.html">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html" class="active">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / Operations / Production readiness</div>
+        <article>
+          <h1>Production readiness</h1>
+          <p class="lede">What is ready, what is missing, and the concrete list of things to change before this is public.</p>
+
+<h2>What exists</h2>
+<ul>
+  <li><code>api/Dockerfile</code> &mdash; the stock Rails 8 production image (precompiled bootsnap,
+      non-root user, Thruster in front of Puma).</li>
+  <li><code>api/config/deploy.yml</code> and <code>api/.kamal/</code> &mdash; Kamal scaffolding with
+      sample hooks, still carrying placeholder values.</li>
+  <li><code>api/config/environments/production.rb</code> &mdash; stock settings, including
+      <code>force_ssl</code> and log-to-stdout behaviour from the generator.</li>
+  <li><code>npm run build</code> &mdash; produces a static <code>web/dist/</code> bundle ready for any
+      CDN or static host.</li>
+  <li><code>GET /up</code> &mdash; a health endpoint a load balancer can poll.</li>
+</ul>
+
+<h2>What is missing</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Gap</th>
+<th>Why it blocks going public</th>
+<th>Where to fix</th>
+</tr></thead>
+<tbody>
+<tr><td>CORS allows only localhost:5173/127.0.0.1:5173</td><td>The deployed frontend origin would be blocked</td><td><code>api/config/initializers/cors.rb</code></td></tr>
+<tr><td>Compose file is development-only</td><td>Bind mounts, dev server, <code>change-me</code> secrets, <code>RAILS_ENV=development</code></td><td>New compose/Kamal config; do not reuse this one</td></tr>
+<tr><td>Kamal config is a placeholder</td><td>No registry, hosts, or secrets configured</td><td><code>api/config/deploy.yml</code>, <code>api/.kamal/secrets</code></td></tr>
+<tr><td><code>SITE_URL</code> defaults to localhost</td><td>RSS links and guids would point at localhost</td><td>Environment variable at deploy time</td></tr>
+<tr><td>Active Storage uses local disk</td><td>Uploads vanish with the container unless a volume/bucket is attached</td><td><code>api/config/storage.yml</code> (S3/GCS blocks are commented in)</td></tr>
+<tr><td>Uploads are never garbage-collected</td><td>Deleted posts leave orphaned blobs</td><td>A purge job or manual cleanup</td></tr>
+<tr><td>No SSR / prerendering</td><td>Crawlers and social previews see an empty shell</td><td>Architectural &mdash; see <a href="../overview/decisions.html">Decisions</a></td></tr>
+<tr><td>Single shared password, no 2FA, no token revocation</td><td>One secret protects all writes</td><td><a href="../auth/jwt-internals.html">Auth internals</a></td></tr>
+<tr><td>Rate limiting uses the in-memory cache</td><td>Counters are per process and reset on restart</td><td>Use a shared cache store (solid_cache is already bundled)</td></tr>
+<tr><td>No frontend tests, no web CI job</td><td>UI regressions ship silently</td><td><a href="ci-quality.html">CI</a></td></tr>
+<tr><td>No backups, monitoring, or error reporting</td><td>A failure would be invisible and possibly unrecoverable</td><td>Infrastructure choice</td></tr>
+<tr><td>Tag counting and the feed run uncached</td><td>Every request tallies tags / re-renders 20 posts</td><td>Add caching if traffic ever justifies it</td></tr>
+</tbody></table></div>
+<h2>A minimal path to public</h2>
+<ol>
+  <li>Pick hosting for two artifacts: the Rails image and the static <code>web/dist</code>.</li>
+  <li>Add the real frontend origin to the CORS allowlist, and serve both over HTTPS.</li>
+  <li>Provision Postgres with backups; set <code>DATABASE_URL</code> and
+      <code>RAILS_MASTER_KEY</code>.</li>
+  <li>Set strong <code>ADMIN_PASSWORD</code> and <code>JWT_SECRET</code>, plus the real
+      <code>SITE_URL</code>, as deploy-time secrets &mdash; never in git.</li>
+  <li>Point Active Storage at durable storage (bucket or mounted volume).</li>
+  <li>Build the frontend with <code>VITE_API_URL</code> set to the public API URL.</li>
+  <li>Wire <code>/up</code> into the platform's health checks and add error reporting.</li>
+  <li>Decide on SEO: if it matters, prerender or move to a framework that can.</li>
+</ol>
+
+<div class="warn"><p>Until all of the above is done, treat this as a local-only application. The current
+defaults (<code>change-me</code>, localhost CORS, disk storage, dev server) are safe precisely because
+nothing is exposed &mdash; both published ports bind to <code>127.0.0.1</code>.</p></div>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../ops/ci-quality.html">&larr; CI, tests &amp; linters</a>
+        <a class="pager-link" href="../reference/file-map.html">File map &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+          } else {
+            fallback(text, done);
+          }
+        }
+      });
+
+      function fallback(text, done) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { document.execCommand("copy"); done(); } catch (error) { /* ignore */ }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>

@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>All endpoints &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html">Tech stack</a></li>
+            <li><a href="../overview/decisions.html">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html">Public site</a></li>
+            <li><a href="../features/themes.html">Four themes</a></li>
+            <li><a href="../features/blog-posts.html">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html" class="active">All endpoints</a></li>
+            <li><a href="../api/data-model.html">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html">Native local setup</a></li>
+            <li><a href="../ops/environment.html">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / API / All endpoints</div>
+        <article>
+          <h1>All endpoints</h1>
+          <p class="lede">Every route the API exposes, with parameters, auth, response shapes, and copy-pasteable curl.</p>
+
+<h2>At a glance</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Method</th>
+<th>Path</th>
+<th>Auth</th>
+<th>Purpose</th>
+</tr></thead>
+<tbody>
+<tr><td>GET</td><td><code>/up</code></td><td>public</td><td>Rails health check &mdash; 200 when the app booted</td></tr>
+<tr><td>GET</td><td><code>/api/v1/posts</code></td><td>public</td><td>Published posts, paginated, optional tag filter</td></tr>
+<tr><td>GET</td><td><code>/api/v1/posts/:slug</code></td><td>public*</td><td>One post with its Markdown body (*drafts need admin)</td></tr>
+<tr><td>POST</td><td><code>/api/v1/posts</code></td><td>admin</td><td>Create a post</td></tr>
+<tr><td>PATCH / PUT</td><td><code>/api/v1/posts/:slug</code></td><td>admin</td><td>Update a post (also publish/unpublish)</td></tr>
+<tr><td>DELETE</td><td><code>/api/v1/posts/:slug</code></td><td>admin</td><td>Delete a post</td></tr>
+<tr><td>GET</td><td><code>/api/v1/admin/posts</code></td><td>admin</td><td>All posts incl. drafts, with bodies and <code>updated_at</code></td></tr>
+<tr><td>POST</td><td><code>/api/v1/uploads</code></td><td>admin</td><td>Upload a cover image (multipart)</td></tr>
+<tr><td>GET</td><td><code>/api/v1/tags</code></td><td>public</td><td>Tag cloud with counts</td></tr>
+<tr><td>GET</td><td><code>/api/v1/profile</code></td><td>public</td><td>Contents of <code>config/profile.yml</code></td></tr>
+<tr><td>POST</td><td><code>/api/v1/session</code></td><td>public</td><td>Exchange the admin password for a JWT</td></tr>
+<tr><td>GET</td><td><code>/feed.xml</code></td><td>public</td><td>RSS 2.0, 20 newest published posts</td></tr>
+</tbody></table></div>
+<p>Base URL in development: <code>http://localhost:3000</code>. Everything under
+<code>/api/v1</code> speaks JSON; send <code>Content-Type: application/json</code> on writes.</p>
+
+<h2>GET /api/v1/posts</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Param</th>
+<th>Type</th>
+<th>Default</th>
+<th>Notes</th>
+</tr></thead>
+<tbody>
+<tr><td><code>tag</code></td><td>string</td><td>&mdash;</td><td>Exact match, lowercased; ignored when blank</td></tr>
+<tr><td><code>page</code></td><td>integer</td><td>1</td><td>Invalid or &le; 0 falls back to 1</td></tr>
+<tr><td><code>per_page</code></td><td>integer</td><td>10</td><td>Clamped to 1&hellip;100</td></tr>
+</tbody></table></div><pre data-lang="sh"><code>curl &quot;http://localhost:3000/api/v1/posts?tag=ruby&amp;page=1&amp;per_page=5&quot;
+
+{
+  &quot;posts&quot;: [
+    {
+      &quot;title&quot;: &quot;The Boring Parts of a Good Rails Application&quot;,
+      &quot;slug&quot;: &quot;the-boring-parts-of-a-good-rails-application&quot;,
+      &quot;excerpt&quot;: &quot;A reliable Rails codebase is usually built from ...&quot;,
+      &quot;cover_image_url&quot;: &quot;/covers/aurora.svg&quot;,
+      &quot;tags&quot;: [&quot;rails&quot;, &quot;architecture&quot;],
+      &quot;published&quot;: true,
+      &quot;published_at&quot;: &quot;2026-08-01T09:12:00.000Z&quot;,
+      &quot;reading_time_minutes&quot;: 7
+    }
+  ],
+  &quot;meta&quot;: { &quot;page&quot;: 1, &quot;per_page&quot;: 5, &quot;total&quot;: 9, &quot;total_pages&quot;: 2 }
+}</code></pre>
+<p>Drafts are never included. <code>body_markdown</code> is omitted from list responses on purpose.</p>
+
+<h2>GET /api/v1/posts/:slug</h2>
+<p>Returns <code>{ "post": { &hellip;, "body_markdown": "&hellip;" } }</code>. Unknown slug &rarr;
+<code>404 {"error":"Not found"}</code>. A draft slug also returns <code>404</code> unless a valid admin
+token is present, in which case the full draft is returned.</p>
+<pre data-lang="sh"><code>curl http://localhost:3000/api/v1/posts/a-slugged-post
+curl -H &quot;Authorization: Bearer $TOKEN&quot; http://localhost:3000/api/v1/posts/my-draft   # drafts</code></pre>
+<h2>POST /api/v1/session</h2>
+<pre data-lang="sh"><code>curl -X POST http://localhost:3000/api/v1/session \
+  -H &#x27;Content-Type: application/json&#x27; \
+  -d &#x27;{&quot;password&quot;:&quot;change-me&quot;}&#x27;
+
+{ &quot;token&quot;: &quot;eyJhbGciOiJIUzI1NiJ9...&quot; }</code></pre>
+<p><code>401</code> on a wrong password, <code>400</code> if <code>password</code> is missing
+(<code>ParameterMissing</code>), <code>429</code> after 10 attempts in 3 minutes.</p>
+
+<h2>POST /api/v1/posts</h2>
+<p>Body must be nested under <code>post</code>. Permitted keys: <code>title</code>, <code>slug</code>,
+<code>excerpt</code>, <code>body_markdown</code>, <code>cover_image_url</code>,
+<code>published</code>, <code>tags[]</code>. Anything else is dropped silently.</p>
+<pre data-lang="sh"><code>TOKEN=$(curl -s -X POST http://localhost:3000/api/v1/session \
+  -H &#x27;Content-Type: application/json&#x27; -d &#x27;{&quot;password&quot;:&quot;change-me&quot;}&#x27; | ruby -rjson -e &#x27;puts JSON.parse(STDIN.read)[&quot;token&quot;]&#x27;)
+
+curl -X POST http://localhost:3000/api/v1/posts \
+  -H &quot;Authorization: Bearer $TOKEN&quot; -H &#x27;Content-Type: application/json&#x27; \
+  -d &#x27;{&quot;post&quot;:{&quot;title&quot;:&quot;Hello world&quot;,&quot;body_markdown&quot;:&quot;# Hi\n\nBody.&quot;,&quot;tags&quot;:[&quot;meta&quot;],&quot;published&quot;:false}}&#x27;</code></pre>
+<p><code>201</code> with the detailed post on success. Omitting <code>slug</code> generates one from the
+title. <code>422</code> with <code>{"errors":{...}}</code> when title, body, or slug uniqueness fails.
+Missing the <code>post</code> wrapper is a <code>400</code>.</p>
+
+<h2>PATCH /api/v1/posts/:slug</h2>
+<p>Partial updates are fine &mdash; this is also how publishing works:</p>
+<pre data-lang="sh"><code>curl -X PATCH http://localhost:3000/api/v1/posts/hello-world \
+  -H &quot;Authorization: Bearer $TOKEN&quot; -H &#x27;Content-Type: application/json&#x27; \
+  -d &#x27;{&quot;post&quot;:{&quot;published&quot;:true}}&#x27;</code></pre>
+<p>Changing <code>slug</code> changes the public URL immediately; the old one 404s. Publishing stamps
+<code>published_at</code> only if it was blank.</p>
+
+<h2>DELETE /api/v1/posts/:slug</h2>
+<p><code>204 No Content</code> on success, <code>404</code> for an unknown slug. Attached upload blobs
+are not removed.</p>
+
+<h2>GET /api/v1/admin/posts</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Param</th>
+<th>Values</th>
+<th>Result</th>
+</tr></thead>
+<tbody>
+<tr><td><code>status</code></td><td><code>draft</code></td><td><code>Post.drafts</code> &mdash; unpublished, newest created first</td></tr>
+<tr><td><code>status</code></td><td><code>published</code></td><td><code>Post.published</code> &mdash; newest published first</td></tr>
+<tr><td><code>status</code></td><td>anything else / omitted</td><td>All posts ordered by <code>created_at DESC</code></td></tr>
+</tbody></table></div>
+<p>Every item includes <code>body_markdown</code> and <code>updated_at</code> (the public list has
+neither). No pagination here.</p>
+
+<h2>POST /api/v1/uploads</h2>
+<pre data-lang="sh"><code>curl -X POST http://localhost:3000/api/v1/uploads \
+  -H &quot;Authorization: Bearer $TOKEN&quot; \
+  -F file=@cover.png
+
+{ &quot;url&quot;: &quot;http://localhost:3000/rails/active_storage/blobs/redirect/&lt;signed-id&gt;/cover.png&quot; }</code></pre>
+<p>Multipart only, field name <code>file</code>. See
+<a href="../features/covers-uploads.html">Covers &amp; uploads</a> for the validation rules.</p>
+
+<h2>GET /api/v1/tags</h2>
+<pre data-lang="json"><code>{ &quot;tags&quot;: [ { &quot;tag&quot;: &quot;architecture&quot;, &quot;count&quot;: 4 }, { &quot;tag&quot;: &quot;rails&quot;, &quot;count&quot;: 6 } ] }</code></pre>
+<p>Alphabetical; published posts only; posts with no tags are skipped.</p>
+
+<h2>GET /api/v1/profile</h2>
+<p>The parsed YAML file, returned as-is: <code>name</code>, <code>headline</code>, <code>bio[]</code>,
+<code>avatar_url</code>, <code>location</code>, <code>links[]</code>, <code>skills[]</code>.</p>
+
+<h2>GET /up and GET /feed.xml</h2>
+<p><code>/up</code> is the stock Rails health endpoint (200 = booted, 500 = boot error) and is what a
+container orchestrator would poll. <code>/feed.xml</code> is documented on
+<a href="../features/rss-feed.html">RSS feed</a>.</p>
+
+<div class="note"><p>Routes are declared in <code>api/config/routes.rb</code> with
+<code>param: :slug</code>, so <code>:slug</code> &mdash; never an id &mdash; is the path segment
+everywhere. Slugs are URL-encoded by the frontend before use.</p></div>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../auth/jwt-internals.html">&larr; How the JWT auth works</a>
+        <a class="pager-link" href="../api/data-model.html">Data model &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+          } else {
+            fallback(text, done);
+          }
+        }
+      });
+
+      function fallback(text, done) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { document.execCommand("copy"); done(); } catch (error) { /* ignore */ }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>

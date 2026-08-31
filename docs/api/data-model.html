@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Data model &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html">Tech stack</a></li>
+            <li><a href="../overview/decisions.html">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html">Public site</a></li>
+            <li><a href="../features/themes.html">Four themes</a></li>
+            <li><a href="../features/blog-posts.html">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html">All endpoints</a></li>
+            <li><a href="../api/data-model.html" class="active">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html">Native local setup</a></li>
+            <li><a href="../ops/environment.html">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / API / Data model</div>
+        <article>
+          <h1>Data model</h1>
+          <p class="lede">One meaningful table, three Active Storage tables, and the model logic that surrounds them.</p>
+
+<h2><code>posts</code></h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Column</th>
+<th>Type</th>
+<th>Constraints</th>
+<th>Meaning</th>
+</tr></thead>
+<tbody>
+<tr><td><code>id</code></td><td>bigint</td><td>PK</td><td>Internal only, never exposed by the API</td></tr>
+<tr><td><code>title</code></td><td>string</td><td>NOT NULL, validated present</td><td>Post title</td></tr>
+<tr><td><code>slug</code></td><td>string</td><td>NOT NULL, unique index</td><td>Public identifier in URLs</td></tr>
+<tr><td><code>excerpt</code></td><td>text</td><td>nullable</td><td>Card/archive summary</td></tr>
+<tr><td><code>body_markdown</code></td><td>text</td><td>NOT NULL, validated present</td><td>Raw Markdown</td></tr>
+<tr><td><code>cover_image_url</code></td><td>string</td><td>nullable</td><td>Absolute URL or path resolved against the API</td></tr>
+<tr><td><code>tags</code></td><td>string[]</td><td>NOT NULL DEFAULT [], GIN index</td><td>Lowercase tag list</td></tr>
+<tr><td><code>published</code></td><td>boolean</td><td>NOT NULL DEFAULT false, indexed</td><td>Visibility switch</td></tr>
+<tr><td><code>published_at</code></td><td>datetime</td><td>nullable</td><td>First publication time; drives ordering</td></tr>
+<tr><td><code>created_at</code> / <code>updated_at</code></td><td>datetime</td><td>NOT NULL</td><td>Row timestamps; <code>updated_at</code> is shown in the dashboard</td></tr>
+</tbody></table></div>
+<p>Indexes: <code>index_posts_on_slug</code> (unique), <code>index_posts_on_published</code>,
+<code>index_posts_on_tags</code> (GIN). Schema version
+<code>2026_08_28_120930</code>; the only app migration is <code>CreatePosts</code>, alongside the
+Active Storage install migration.</p>
+
+<h2>Active Storage tables</h2>
+<p><code>active_storage_blobs</code>, <code>active_storage_attachments</code>, and
+<code>active_storage_variant_records</code> come from the stock install migration. <code>Post</code>
+declares <code>has_one_attached :cover_image</code>, but the current upload flow creates a standalone
+blob and stores its URL in <code>cover_image_url</code> &mdash; so the attachment association is
+available and currently unused.</p>
+
+<h2>Model behaviour</h2>
+<pre data-lang="ruby"><code>class Post &lt; ApplicationRecord
+  has_one_attached :cover_image
+
+  validates :title, presence: true
+  validates :body_markdown, presence: true
+  validates :slug, presence: true, uniqueness: true
+
+  before_validation :generate_slug, on: :create
+  before_save :sync_published_at
+
+  scope :published, -&gt; { where(published: true).order(published_at: :desc) }
+  scope :drafts,    -&gt; { where(published: false).order(created_at: :desc) }
+  scope :by_tag,    -&gt;(tag) { where(&quot;? = ANY(tags)&quot;, tag.to_s.downcase) }
+
+  def reading_time_minutes
+    [ (body_markdown.to_s.scan(/\S+/).length / 200.0).ceil, 1 ].max
+  end
+end</code></pre>
+<h3>Slug generation</h3>
+<p>On create only, and only when <code>slug</code> is blank: <code>title.parameterize</code> (or
+<code>"post"</code> if that is empty), then <code>-2</code>, <code>-3</code>&hellip; until unique. The
+uniqueness check excludes the record's own id, and the database unique index is the real guarantee.</p>
+
+<h3>Publication timestamp</h3>
+<p><code>self.published_at ||= Time.current if published?</code> &mdash; set once, kept forever. See
+<a href="../features/blog-posts.html">Writing &amp; publishing</a> for why.</p>
+
+<h3>Reading time</h3>
+<p>Words (<code>\S+</code>) &divide; 200, rounded up, minimum 1. Markdown syntax counts as words, so
+code-heavy posts read slightly high.</p>
+
+<h2>Serialization</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Field</th>
+<th>Public list</th>
+<th>Public show</th>
+<th>Admin list</th>
+</tr></thead>
+<tbody>
+<tr><td>title, slug, excerpt, cover_image_url, tags, published, published_at, reading_time_minutes</td><td>yes</td><td>yes</td><td>yes</td></tr>
+<tr><td>body_markdown</td><td>no</td><td>yes</td><td>yes</td></tr>
+<tr><td>updated_at</td><td>no</td><td>no</td><td>yes</td></tr>
+<tr><td>id, created_at</td><td>never</td><td>never</td><td>never</td></tr>
+</tbody></table></div>
+<p>Serialization is a private method on each controller (<code>serialize_post</code>) &mdash; no
+serializer gem, no jbuilder. <code>tags</code> is always coerced to <code>[]</code> when null.</p>
+
+<h2>Seeds</h2>
+<p><code>api/db/seeds.rb</code> defines 14 long-form posts with realistic bodies, tags, back-dated
+<code>published_at</code> values, and covers from <code>api/public/covers/</code>. It is idempotent
+<em>by title</em>: each entry is looked up with
+<code>Post.find_or_initialize_by(slug: attributes[:title].parameterize)</code> and re-assigned. Two
+consequences: re-running seeds overwrites local edits to those posts, and if you rename a seeded post's
+slug the next seed run recreates the original.</p>
+<p>Seeds run automatically on every Docker boot (<code>api/bin/docker-dev-entrypoint</code>) and are
+verified in <code>bin/ci</code> via <code>db:seed:replant</code>.</p>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../api/endpoints.html">&larr; All endpoints</a>
+        <a class="pager-link" href="../api/errors.html">Errors &amp; status codes &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+          } else {
+            fallback(text, done);
+          }
+        }
+      });
+
+      function fallback(text, done) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { document.execCommand("copy"); done(); } catch (error) { /* ignore */ }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>

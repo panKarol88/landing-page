@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Native local setup &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html">Tech stack</a></li>
+            <li><a href="../overview/decisions.html">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html">Public site</a></li>
+            <li><a href="../features/themes.html">Four themes</a></li>
+            <li><a href="../features/blog-posts.html">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html">All endpoints</a></li>
+            <li><a href="../api/data-model.html">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html" class="active">Native local setup</a></li>
+            <li><a href="../ops/environment.html">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / Operations / Native local setup</div>
+        <article>
+          <h1>Native local setup</h1>
+          <p class="lede">Running the stack without Docker: Ruby 3.3.6, PostgreSQL, Node, and <code>bin/dev</code>.</p>
+
+<h2>When to bother</h2>
+<p>Docker is the documented default. Native is worth it for a faster edit&ndash;test loop, a debugger
+attached to Puma, or when Docker is unavailable. The canonical instructions live in
+<code>scripts/setup.md</code>; this page summarises them and adds the details that matter afterwards.</p>
+
+<h2>1. Ruby 3.3.6</h2>
+<p>Ubuntu 22.04's apt Ruby is 3.0, so <code>scripts/setup.md</code> builds 3.3.6 from source into
+<code>~/.rubies/ruby-3.3.6</code> and prepends it to <code>PATH</code>. Build dependencies:
+<code>build-essential autoconf bison libssl-dev libyaml-dev libreadline-dev zlib1g-dev
+libncurses5-dev libffi-dev libgdbm-dev libdb-dev uuid-dev rustc cargo</code>. Then
+<code>gem install rails -v '~&gt; 8.1' --no-document</code>.</p>
+
+<h2>2. PostgreSQL</h2>
+<pre data-lang="sh"><code>sudo apt-get install -y postgresql postgresql-contrib libpq-dev
+sudo pg_ctlcluster 14 main start
+sudo -u postgres createuser --superuser "$USER"   # skip if the role exists</code></pre>
+<p><code>api/config/database.yml</code> has no host/username for development, so Rails connects over the
+local Unix socket as your OS user &mdash; no password needed. Databases:
+<code>api_development</code> and <code>api_test</code>.</p>
+
+<h2>3. API</h2>
+<pre data-lang="sh"><code>cd api
+bundle install
+cp .env.example .env      # then set ADMIN_PASSWORD and JWT_SECRET
+bin/rails db:create db:migrate db:seed
+bin/rails server -p 3000</code></pre>
+<p><code>dotenv-rails</code> loads <code>api/.env</code> in development and test. Uploads go to
+<code>api/storage/</code> via the Active Storage <code>local</code> disk service.</p>
+
+<h2>4. Frontend</h2>
+<pre data-lang="sh"><code>cd web
+npm install
+npm run dev            # vite --host 0.0.0.0, port 5173</code></pre>
+<p><code>web/.env.example</code> documents the only variable, <code>VITE_API_URL</code>
+(default <code>http://localhost:3000</code>). Vite only exposes variables prefixed
+<code>VITE_</code>, and they are baked in at build time.</p>
+
+<h2>5. Both at once</h2>
+<pre data-lang="sh"><code>bin/dev      # from the repo root</code></pre>
+<p><code>bin/dev</code> starts <code>bin/rails server -p 3000</code> and <code>npm run dev</code> in
+parallel, and traps <code>INT</code>/<code>TERM</code>/<code>EXIT</code> so <kbd>Ctrl+C</kbd> stops
+both. It also hard-codes <code>PATH="/home/ubuntu/.rubies/ruby-3.3.6/bin:$PATH"</code>, which matches
+<code>scripts/setup.md</code> but must be edited if your Ruby lives elsewhere.
+<code>Procfile.dev</code> describes the same two processes for any Procfile runner
+(<code>foreman</code>, <code>overmind</code>).</p>
+
+<h2>Useful native commands</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Goal</th>
+<th>Command</th>
+</tr></thead>
+<tbody>
+<tr><td>Full quality pipeline</td><td><code>cd api &amp;&amp; bin/ci</code></td></tr>
+<tr><td>Tests only</td><td><code>cd api &amp;&amp; bin/rails test</code></td></tr>
+<tr><td>Ruby style</td><td><code>cd api &amp;&amp; bin/rubocop</code> (<code>-a</code> to autocorrect)</td></tr>
+<tr><td>Security scans</td><td><code>bin/brakeman</code>, <code>bin/bundler-audit</code></td></tr>
+<tr><td>Reset the database</td><td><code>cd api &amp;&amp; bin/rails db:reset</code></td></tr>
+<tr><td>Frontend lint / format</td><td><code>cd web &amp;&amp; npm run lint</code> / <code>npm run format</code></td></tr>
+<tr><td>Type-check + production build</td><td><code>cd web &amp;&amp; npm run build</code></td></tr>
+</tbody></table></div>
+<div class="note"><p>Docker and native can share nothing safely: both want ports 3000/5173 and the same
+database name. Stop one before starting the other.</p></div>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../ops/docker.html">&larr; Docker settings</a>
+        <a class="pager-link" href="../ops/environment.html">Environment variables &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+          } else {
+            fallback(text, done);
+          }
+        }
+      });
+
+      function fallback(text, done) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { document.execCommand("copy"); done(); } catch (error) { /* ignore */ }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>

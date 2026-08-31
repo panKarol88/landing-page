@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RSS feed &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html">Tech stack</a></li>
+            <li><a href="../overview/decisions.html">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html">Public site</a></li>
+            <li><a href="../features/themes.html">Four themes</a></li>
+            <li><a href="../features/blog-posts.html">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html" class="active">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html">All endpoints</a></li>
+            <li><a href="../api/data-model.html">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html">Native local setup</a></li>
+            <li><a href="../ops/environment.html">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / Features / RSS feed</div>
+        <article>
+          <h1>RSS feed</h1>
+          <p class="lede"><code>/feed.xml</code> is hand-rendered RSS 2.0 straight from the API, with the 20 newest published posts.</p>
+
+<h2>Endpoint</h2>
+<p><code>GET /feed.xml</code> &rarr; <code>FeedController#show</code>, routed with
+<code>defaults: { format: :xml }</code>. It is public and takes no parameters. The frontend exposes it
+as <code>RSS_URL</code> (<code>${API_URL}/feed.xml</code>) in theme footers.</p>
+
+<h2>What it contains</h2>
+<ul>
+  <li>Channel title <em>Karol's Engineering Blog</em>, description <em>Notes on software engineering by
+      Karol.</em>, <code>link</code> = <code>SITE_URL</code>, and a <code>lastBuildDate</code> of
+      &ldquo;now&rdquo;.</li>
+  <li><code>Post.published.limit(20)</code> &mdash; newest by <code>published_at</code>, drafts
+      excluded.</li>
+  <li>Per item: title, full body as HTML inside <code>&lt;description&gt;</code>,
+      <code>pubDate</code> (<code>published_at</code>, falling back to <code>created_at</code>, in
+      RFC&nbsp;2822), and <code>guid</code>/<code>link</code> =
+      <code>&lt;SITE_URL&gt;/blog/&lt;slug&gt;</code>.</li>
+</ul>
+
+<h2>Markdown and safety</h2>
+<pre data-lang="ruby"><code>Redcarpet::Markdown.new(Redcarpet::Render::HTML.new(hard_wrap: true, filter_html: true))</code></pre>
+<ul>
+  <li>This is the only place the server turns Markdown into HTML.</li>
+  <li><code>filter_html: true</code> strips raw HTML, so a <code>&lt;script&gt;</code> in a post body
+      never reaches a reader's client.</li>
+  <li>Titles and links are escaped with <code>CGI.escapeHTML</code>; bodies are wrapped in CDATA with
+      any <code>]]&gt;</code> inside them split safely
+      (<code>]]&gt;</code> &rarr; <code>]]]]&gt;&lt;![CDATA[&gt;</code>). Both behaviours have
+      tests, including a unit test on the <code>cdata</code> helper itself.</li>
+</ul>
+
+<h2><code>SITE_URL</code> matters here</h2>
+<p>Every link and guid is built from <code>ENV.fetch("SITE_URL", "http://localhost:5173")</code> with a
+trailing slash chomped. If you ever publish the feed, set <code>SITE_URL</code> to the public site
+origin &mdash; otherwise subscribers get <code>localhost</code> links, and because the guid is derived
+from the same value, changing it later re-announces every item as new.</p>
+
+<h2>Shape</h2>
+<pre data-lang="xml"><code>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;rss version=&quot;2.0&quot;&gt;
+  &lt;channel&gt;
+    &lt;title&gt;Karol&amp;#39;s Engineering Blog&lt;/title&gt;
+    &lt;description&gt;Notes on software engineering by Karol.&lt;/description&gt;
+    &lt;link&gt;http://localhost:5173&lt;/link&gt;
+    &lt;lastBuildDate&gt;Mon, 31 Aug 2026 06:00:00 +0000&lt;/lastBuildDate&gt;
+    &lt;item&gt;
+      &lt;title&gt;The Boring Parts of a Good Rails Application&lt;/title&gt;
+      &lt;description&gt;&lt;![CDATA[&lt;h2&gt;Boring is a feature&lt;/h2&gt;...]]&gt;&lt;/description&gt;
+      &lt;pubDate&gt;Sat, 01 Aug 2026 09:12:00 +0000&lt;/pubDate&gt;
+      &lt;guid isPermaLink=&quot;true&quot;&gt;http://localhost:5173/blog/the-boring-parts-of-a-good-rails-application&lt;/guid&gt;
+      &lt;link&gt;http://localhost:5173/blog/the-boring-parts-of-a-good-rails-application&lt;/link&gt;
+    &lt;/item&gt;
+  &lt;/channel&gt;
+&lt;/rss&gt;</code></pre>
+<div class="note"><p>There is no caching or conditional-GET support: every request re-renders all 20
+bodies through Redcarpet.</p></div>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../features/profile-about.html">&larr; Profile &amp; About page</a>
+        <a class="pager-link" href="../auth/dashboard-login.html">Logging into the dashboard &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+          } else {
+            fallback(text, done);
+          }
+        }
+      });
+
+      function fallback(text, done) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { document.execCommand("copy"); done(); } catch (error) { /* ignore */ }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>

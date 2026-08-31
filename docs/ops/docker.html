@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Docker settings &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html">Tech stack</a></li>
+            <li><a href="../overview/decisions.html">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html">Public site</a></li>
+            <li><a href="../features/themes.html">Four themes</a></li>
+            <li><a href="../features/blog-posts.html">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html">All endpoints</a></li>
+            <li><a href="../api/data-model.html">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html" class="active">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html">Native local setup</a></li>
+            <li><a href="../ops/environment.html">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / Operations / Docker settings</div>
+        <article>
+          <h1>Docker settings</h1>
+          <p class="lede"><code>docker-compose.yml</code> in full: three services, four volumes, and the entrypoints that make <code>up</code> enough.</p>
+
+<h2>One command</h2>
+<pre data-lang="sh"><code>docker compose up --build      # first run, or after Gemfile/package.json changes
+docker compose up              # afterwards</code></pre>
+<p>Then open <code>http://localhost:5173</code>; the API answers on
+<code>http://localhost:3000</code>. Wait for the <code>api</code> service to finish preparing and
+seeding before the first page load, or the frontend shows an error state.</p>
+
+<h2>Services</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Service</th>
+<th>Image / build</th>
+<th>Ports</th>
+<th>Notable settings</th>
+</tr></thead>
+<tbody>
+<tr><td><code>db</code></td><td><code>postgres:16-alpine</code></td><td>not published</td><td><code>postgres/postgres</code>, database <code>api_development</code>, <code>pg_isready</code> healthcheck every 5s &times; 20</td></tr>
+<tr><td><code>api</code></td><td>build <code>./api</code> with <code>Dockerfile.dev</code></td><td><code>127.0.0.1:3000:3000</code></td><td><code>depends_on: db (service_healthy)</code>; Puma bound to <code>0.0.0.0:3000</code></td></tr>
+<tr><td><code>web</code></td><td>build <code>./web</code> with <code>Dockerfile.dev</code></td><td><code>127.0.0.1:5173:5173</code></td><td><code>depends_on: api</code>; Vite started with <code>--host 0.0.0.0</code></td></tr>
+</tbody></table></div>
+<div class="note"><p>Both published ports are bound to <code>127.0.0.1</code>, so the stack is not
+reachable from your network even on an untrusted Wi-Fi.</p></div>
+
+<h2>Environment passed in</h2>
+<pre data-lang="yaml"><code>api:
+  RAILS_ENV: development
+  DATABASE_URL: postgres://postgres:postgres@db:5432/api_development
+  ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me}
+  JWT_SECRET:     ${JWT_SECRET:-local-development-jwt-secret-change-me}
+  SITE_URL:       ${SITE_URL:-http://localhost:5173}
+
+web:
+  VITE_API_URL:   ${VITE_API_URL:-http://localhost:3000}</code></pre>
+<p>The <code>${VAR:-default}</code> form means Compose reads the root <code>.env</code> (or your shell)
+and falls back to development defaults. Override either way:</p>
+<pre data-lang="sh"><code>cp .env.example .env      # then edit
+# or inline:
+ADMIN_PASSWORD=choose-a-password JWT_SECRET=choose-a-secret docker compose up --build</code></pre>
+
+<h2>Volumes</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Volume / mount</th>
+<th>Mounted at</th>
+<th>Why</th>
+</tr></thead>
+<tbody>
+<tr><td><code>./api</code> (bind)</td><td><code>/rails</code></td><td>Live code reload &mdash; edits on the host take effect immediately</td></tr>
+<tr><td><code>api-bundle</code></td><td><code>/usr/local/bundle</code></td><td>Gems survive rebuilds and are not written into the bind mount</td></tr>
+<tr><td><code>api-storage</code></td><td><code>/rails/storage</code></td><td>Uploaded cover images persist across restarts</td></tr>
+<tr><td><code>./web</code> (bind)</td><td><code>/app</code></td><td>Vite HMR against host files</td></tr>
+<tr><td><code>web-node-modules</code></td><td><code>/app/node_modules</code></td><td>Keeps container-built modules out of the host tree</td></tr>
+<tr><td><code>db-data</code></td><td><code>/var/lib/postgresql/data</code></td><td>Database persistence</td></tr>
+</tbody></table></div>
+<h2>Entrypoints</h2>
+<h3>api &mdash; <code>api/bin/docker-dev-entrypoint</code></h3>
+<pre data-lang="sh"><code>bundle check || bundle install
+./bin/rails db:prepare
+./bin/rails db:seed
+exec &quot;$@&quot;    # -&gt; bin/rails server -b 0.0.0.0 -p 3000</code></pre>
+<p>So every boot installs missing gems, creates/migrates the database, and re-runs the seeds
+(idempotent by title &mdash; it overwrites local edits to the 14 seeded posts).</p>
+
+<h3>web &mdash; <code>web/bin/docker-dev-entrypoint</code></h3>
+<p>Hashes <code>package-lock.json</code> and compares it to a stamp inside
+<code>node_modules</code>; runs <code>npm ci</code> only when the lockfile changed or modules are
+missing. That is why the second start is fast.</p>
+
+<h3>Images</h3>
+<p><code>api/Dockerfile.dev</code> is <code>ruby:3.3.6-slim</code> plus
+<code>build-essential git libpq-dev libvips libyaml-dev pkg-config postgresql-client</code>, with
+<code>BUNDLE_PATH=/usr/local/bundle</code>. <code>web/Dockerfile.dev</code> is <code>node:20-slim</code>
+with <code>npm ci</code> at build time. <code>api/Dockerfile</code> (no <code>.dev</code>) is the stock
+Rails production image and is not used by Compose.</p>
+
+<h2>Everyday commands</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Goal</th>
+<th>Command</th>
+</tr></thead>
+<tbody>
+<tr><td>Start in the background</td><td><code>docker compose up -d</code></td></tr>
+<tr><td>Follow API logs</td><td><code>docker compose logs -f api</code></td></tr>
+<tr><td>Rails console</td><td><code>docker compose exec api bin/rails c</code></td></tr>
+<tr><td>Run the tests</td><td><code>docker compose exec api bin/rails test</code></td></tr>
+<tr><td>Rubocop</td><td><code>docker compose exec api bin/rubocop</code></td></tr>
+<tr><td>psql</td><td><code>docker compose exec db psql -U postgres api_development</code></td></tr>
+<tr><td>Reseed</td><td><code>docker compose exec api bin/rails db:seed</code></td></tr>
+<tr><td>Reset everything (destroys data)</td><td><code>docker compose down -v</code></td></tr>
+<tr><td>Rebuild after dependency changes</td><td><code>docker compose up --build</code></td></tr>
+<tr><td>Frontend lint</td><td><code>docker compose exec web npm run lint</code></td></tr>
+</tbody></table></div>
+<div class="warn"><p>This compose file is a development convenience: source is bind-mounted, secrets
+default to <code>change-me</code>, <code>RAILS_ENV=development</code>, and the frontend runs the Vite dev
+server rather than a build. Never point it at anything public &mdash; see
+<a href="production.html">Production readiness</a>.</p></div>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../api/errors.html">&larr; Errors &amp; status codes</a>
+        <a class="pager-link" href="../ops/local-setup.html">Native local setup &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+          } else {
+            fallback(text, done);
+          }
+        }
+      });
+
+      function fallback(text, done) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { document.execCommand("copy"); done(); } catch (error) { /* ignore */ }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>

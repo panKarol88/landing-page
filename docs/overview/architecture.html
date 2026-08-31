@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Architecture &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html" class="active">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html">Tech stack</a></li>
+            <li><a href="../overview/decisions.html">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html">Public site</a></li>
+            <li><a href="../features/themes.html">Four themes</a></li>
+            <li><a href="../features/blog-posts.html">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html">All endpoints</a></li>
+            <li><a href="../api/data-model.html">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html">Native local setup</a></li>
+            <li><a href="../ops/environment.html">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / Overview / Architecture</div>
+        <article>
+          <h1>Architecture</h1>
+          <p class="lede">Three processes, one database, one HTTP boundary. Everything interesting happens across that boundary.</p>
+
+<h2>The pieces</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Piece</th>
+<th>Where</th>
+<th>Runs as</th>
+<th>Responsibility</th>
+</tr></thead>
+<tbody>
+<tr><td>PostgreSQL 16</td><td><code>docker-compose.yml</code> service <code>db</code></td><td>Container, volume <code>db-data</code></td><td>Stores <code>posts</code> and Active Storage tables</td></tr>
+<tr><td>Rails 8.1 API</td><td><code>api/</code></td><td>Puma on port 3000</td><td>JSON API, JWT issuing, uploads, RSS</td></tr>
+<tr><td>React SPA</td><td><code>web/</code></td><td>Vite dev server on port 5173</td><td>All rendering, routing, Markdown, themes, admin UI</td></tr>
+</tbody></table></div>
+<p>The frontend never touches the database and the API never renders HTML (except the RSS XML). The
+only contract between them is JSON over <code>fetch</code>, defined in one file:
+<code>web/src/api/client.ts</code>.</p>
+
+<h2>Reading a public page</h2>
+<pre data-lang="flow"><code>Browser -> Vite (index.html + bundle)
+        -> GET  http://localhost:3000/api/v1/profile      (About/Hero data)
+        -> GET  http://localhost:3000/api/v1/posts?page=1 (published only)
+        -> GET  http://localhost:3000/api/v1/tags         (tag cloud)
+Markdown is rendered client-side by react-markdown.</code></pre>
+<p>The home page fires those three requests in a single <code>Promise.all</code>
+(<code>web/src/pages/Home.tsx</code>); the blog index fires posts and tags in parallel and re-fires
+them when the <code>tag</code> or <code>page</code> query parameter changes.</p>
+
+<h2>Writing a post</h2>
+<pre data-lang="flow"><code>POST /api/v1/session   { password }         -> { token }   (stored in localStorage.admin_token)
+GET  /api/v1/admin/posts?status=all         Bearer token   -> drafts + published
+POST /api/v1/uploads   multipart file       Bearer token   -> { url }
+POST /api/v1/posts     { post: {...} }      Bearer token   -> 201 { post }
+PATCH /api/v1/posts/:slug { post: {...} }   Bearer token   -> 200 { post }</code></pre>
+
+<h2>Trust boundaries</h2>
+<ul>
+  <li><strong>The API is authoritative.</strong> <code>authenticate_admin!</code> runs as a
+      <code>before_action</code> on every write (<code>create</code>, <code>update</code>,
+      <code>destroy</code>), on <code>/api/v1/uploads</code>, and on the whole admin posts
+      controller.</li>
+  <li><strong>The frontend guard is cosmetic.</strong> <code>ProtectedAdmin</code> in
+      <code>web/src/main.tsx</code> only checks that <code>localStorage.admin_token</code> is
+      non-empty. Faking that value gets you the admin screens, but every request they make comes back
+      <code>401</code>.</li>
+  <li><strong>Drafts are invisible, not forbidden.</strong> <code>GET /api/v1/posts/:slug</code>
+      raises <code>RecordNotFound</code> for an unpublished post unless the caller is an admin, so an
+      anonymous visitor gets <code>404</code> rather than <code>403</code> &mdash; the existence of a
+      draft slug is not leaked.</li>
+  <li><strong>CORS is pinned.</strong> <code>api/config/initializers/cors.rb</code> allows only
+      <code>http://localhost:5173</code> and <code>http://127.0.0.1:5173</code>. Any other origin is
+      rejected by the browser, which is the first thing to change when the site gets a real
+      domain.</li>
+</ul>
+
+<h2>Where state lives</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>State</th>
+<th>Home</th>
+<th>Lifetime</th>
+</tr></thead>
+<tbody>
+<tr><td>Posts, tags, publication dates</td><td>PostgreSQL <code>posts</code> row</td><td>Until deleted; <code>docker compose down -v</code> wipes it</td></tr>
+<tr><td>Uploaded cover images</td><td>Active Storage disk service, <code>api/storage/</code> (volume <code>api-storage</code>)</td><td>Until the volume is removed</td></tr>
+<tr><td>Admin session</td><td><code>localStorage.admin_token</code> (browser)</td><td>7 days, or until <code>JWT_SECRET</code> changes</td></tr>
+<tr><td>Chosen theme</td><td><code>localStorage.theme</code> (browser)</td><td>Until changed</td></tr>
+<tr><td>Profile text</td><td><code>api/config/profile.yml</code> in git</td><td>Until edited</td></tr>
+</tbody></table></div>
+<div class="note"><p>There is no server-side session store, no Redis, and no background job actually
+in use: <code>solid_queue</code>, <code>solid_cache</code>, and <code>solid_cable</code> ship with the
+Rails 8 skeleton but nothing enqueues work.</p></div>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../index.html">&larr; Documentation home</a>
+        <a class="pager-link" href="../overview/tech-stack.html">Tech stack &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+          } else {
+            fallback(text, done);
+          }
+        }
+      });
+
+      function fallback(text, done) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { document.execCommand("copy"); done(); } catch (error) { /* ignore */ }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>

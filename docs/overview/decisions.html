@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Design decisions &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html">Tech stack</a></li>
+            <li><a href="../overview/decisions.html" class="active">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html">Public site</a></li>
+            <li><a href="../features/themes.html">Four themes</a></li>
+            <li><a href="../features/blog-posts.html">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html">All endpoints</a></li>
+            <li><a href="../api/data-model.html">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html">Native local setup</a></li>
+            <li><a href="../ops/environment.html">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / Overview / Design decisions</div>
+        <article>
+          <h1>Design decisions</h1>
+          <p class="lede">The choices baked into the code, and the reasoning &mdash; including the ones worth revisiting.</p>
+
+<h2>One shared password instead of user accounts</h2>
+<p>There is exactly one author, so there is no <code>users</code> table, no registration, and no
+password reset. <code>POST /api/v1/session</code> compares the submitted password to
+<code>ENV["ADMIN_PASSWORD"]</code> using <code>ActiveSupport::SecurityUtils.secure_compare</code> over
+SHA-256 digests (constant length, constant time) and issues a JWT. Consequence: rotating the password
+is an env-var change and a restart, and there is no way to revoke a single token other than changing
+<code>JWT_SECRET</code>.</p>
+
+<h2>Stateless JWT instead of a server session</h2>
+<p>The API stores nothing about logins. A 7-day HS256 token in <code>localStorage</code> keeps the API
+free of session storage and lets the SPA live on a different origin without cookie/CSRF plumbing. The
+trade-off is real: a token cannot be invalidated individually, and <code>localStorage</code> is
+readable by any script that manages to run on the page.</p>
+
+<h2>Slugs as the public identifier</h2>
+<p>Routes use <code>param: :slug</code>, so URLs are <code>/api/v1/posts/a-slugged-post</code> and
+<code>/blog/a-slugged-post</code> &mdash; no integer IDs leak, and the URL is readable. The slug is
+generated from the title with <code>parameterize</code> on create and de-duplicated with a
+<code>-2</code>, <code>-3</code>&hellip; suffix. Renaming a slug changes the public URL and leaves no
+redirect behind.</p>
+
+<h2>Tags as a Postgres array, not a join table</h2>
+<p><code>posts.tags</code> is <code>string[] NOT NULL DEFAULT []</code> with a GIN index. Filtering is
+<code>where("? = ANY(tags)", tag.downcase)</code> and the tag cloud is computed in Ruby with
+<code>pluck(:tags).flatten.tally</code>. For a single-author blog this removes two models and a join;
+it also means there is no tag rename, no tag description, and the cloud is computed on every request.</p>
+
+<h2><code>published_at</code> is stamped once, never overwritten</h2>
+<p><code>before_save :sync_published_at</code> uses <code>self.published_at ||= Time.current if
+published?</code>. Unpublishing and republishing a post therefore keeps its original date, so the
+archive ordering does not jump around when you fix a typo. Two integration tests pin this behaviour.</p>
+
+<h2>Markdown stored raw, rendered in the browser</h2>
+<p>The database keeps <code>body_markdown</code>; the API never returns HTML. The SPA renders it with
+<code>react-markdown</code> + <code>remark-gfm</code> + <code>rehype-highlight</code>, which also
+powers the editor's live preview with zero server round-trips. The one place the server renders
+Markdown is the RSS feed, where Redcarpet runs with <code>filter_html: true</code>.</p>
+
+<h2>Four full themes instead of a colour switch</h2>
+<p>Each theme (Notion, Brutalist, Pixel, Neon) provides its own <code>Shell</code>,
+<code>Hero</code>, <code>TagCloud</code>, <code>PostList</code>, <code>PostCard</code>, and
+<code>ReaderChrome</code> components plus a block of CSS variables. Tailwind's palette is mapped onto
+those variables (<code>bg</code>, <code>surface</code>, <code>fg</code>, <code>accent</code>,
+<code>rounded-theme</code>, <code>shadow-card</code>&hellip;), so page code stays theme-agnostic and a
+new theme is one folder plus one registry entry.</p>
+
+<h2>No SSR, no static generation</h2>
+<p>The site is a client-rendered SPA. That keeps the stack small but means crawlers and social
+previews see an empty shell, and a cold visit waits for the API. This is the main open architectural
+decision if the blog ever needs SEO.</p>
+
+<h2>Uploads validated by magic bytes</h2>
+<p><code>UploadsController</code> ignores the browser-supplied content type and sniffs the first 16
+bytes to accept only PNG, JPEG, GIF, and WebP, with a 5&nbsp;MB cap. SVG is rejected on purpose &mdash;
+it can carry script. A test uploads an SVG labelled <code>image/png</code> and asserts a
+<code>422</code>.</p>
+
+<h2>Profile in YAML, not in the database</h2>
+<p><code>GET /api/v1/profile</code> reads <code>api/config/profile.yml</code> on every request, so
+name, headline, bio, avatar, location, links, and skills are edited in git with no migration and no
+admin screen.</p>
+
+<h2>Docker for development only</h2>
+<p><code>docker-compose.yml</code> binds both ports to <code>127.0.0.1</code>, ships
+<code>change-me</code> defaults, mounts the source read-write, and runs
+<code>db:prepare</code>/<code>db:seed</code> on every boot. It is a convenience wrapper for one
+machine, explicitly not a deployment artifact &mdash; production would use <code>api/Dockerfile</code>
+and a real build of <code>web/</code>.</p>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../overview/tech-stack.html">&larr; Tech stack</a>
+        <a class="pager-link" href="../features/public-site.html">Public site &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+          } else {
+            fallback(text, done);
+          }
+        }
+      });
+
+      function fallback(text, done) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { document.execCommand("copy"); done(); } catch (error) { /* ignore */ }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>

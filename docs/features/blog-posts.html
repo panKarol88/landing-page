@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Writing &amp; publishing &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html">Tech stack</a></li>
+            <li><a href="../overview/decisions.html">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html">Public site</a></li>
+            <li><a href="../features/themes.html">Four themes</a></li>
+            <li><a href="../features/blog-posts.html" class="active">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html">All endpoints</a></li>
+            <li><a href="../api/data-model.html">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html">Native local setup</a></li>
+            <li><a href="../ops/environment.html">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / Features / Writing &amp; publishing</div>
+        <article>
+          <h1>Writing &amp; publishing</h1>
+          <p class="lede">Everything about authoring: the editor, the fields, the slug rules, and exactly what publishing does.</p>
+
+<h2>Add a post, step by step</h2>
+<ol>
+  <li>Open <code>http://localhost:5173/admin/login</code> and sign in with <code>ADMIN_PASSWORD</code>.</li>
+  <li>Click <strong>New post</strong> (<code>/admin/posts/new</code>).</li>
+  <li>Type a <strong>Title</strong>. The <strong>Slug</strong> field mirrors it (lowercased,
+      non-alphanumerics collapsed to <code>-</code>) until you edit the slug yourself, after which it
+      stops following the title.</li>
+  <li>Optionally write an <strong>Excerpt</strong> (shown on cards and in the archive).</li>
+  <li>Set a <strong>Cover image</strong>: paste a URL or use <strong>Upload cover</strong>, which uploads
+      immediately and fills the URL field with the returned link.</li>
+  <li>Add <strong>Tags</strong>: type and press <kbd>Enter</kbd> or <kbd>,</kbd> (blurring the field
+      also commits). Tags are lowercased and de-duplicated client-side; click a chip to remove it.</li>
+  <li>Write the <strong>Markdown body</strong> &mdash; the right pane previews it live with the same
+      renderer the public site uses.</li>
+  <li><strong>Save</strong> keeps the current published state. <strong>Publish</strong> saves and makes
+      it public in the same request. On an already-published post the button becomes
+      <strong>Unpublish</strong>.</li>
+</ol>
+<p>Creating redirects the URL to <code>/admin/posts/&lt;slug&gt;/edit</code>, so a second Save updates
+instead of creating a duplicate.</p>
+
+<h2>Fields</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Field</th>
+<th>Column</th>
+<th>Required</th>
+<th>Notes</th>
+</tr></thead>
+<tbody>
+<tr><td>Title</td><td><code>title</code> string</td><td>yes</td><td>Validated <code>presence</code>; seeds the slug</td></tr>
+<tr><td>Slug</td><td><code>slug</code> string</td><td>yes (generated)</td><td>Unique index; <code>parameterize</code>d, collisions get <code>-2</code>, <code>-3</code>&hellip;</td></tr>
+<tr><td>Excerpt</td><td><code>excerpt</code> text</td><td>no</td><td>Free text, no length limit</td></tr>
+<tr><td>Markdown body</td><td><code>body_markdown</code> text</td><td>yes</td><td>Validated <code>presence</code>; stored raw</td></tr>
+<tr><td>Cover image URL</td><td><code>cover_image_url</code> string</td><td>no</td><td>Absolute URL, or a path resolved against the API host</td></tr>
+<tr><td>Tags</td><td><code>tags</code> string[]</td><td>no</td><td>Defaults to <code>[]</code>, GIN-indexed, lowercase by convention</td></tr>
+<tr><td>Published</td><td><code>published</code> boolean</td><td>defaults false</td><td>Indexed</td></tr>
+<tr><td>Published at</td><td><code>published_at</code> datetime</td><td>set by the model</td><td>Stamped on first publish, never overwritten</td></tr>
+</tbody></table></div>
+<h2>The publishing mechanism</h2>
+<p>Publishing is not an endpoint &mdash; it is the <code>published</code> flag on a normal update. The
+model does the rest:</p>
+<pre data-lang="ruby"><code>before_save :sync_published_at
+
+def sync_published_at
+  self.published_at ||= Time.current if published?
+end
+
+scope :published, -&gt; { where(published: true).order(published_at: :desc) }
+scope :drafts,    -&gt; { where(published: false).order(created_at: :desc) }</code></pre>
+<p>Consequences worth remembering:</p>
+<ul>
+  <li>A draft is invisible everywhere public: excluded from <code>GET /api/v1/posts</code>, 404 on
+      <code>GET /api/v1/posts/:slug</code> for anonymous callers, absent from <code>/feed.xml</code>,
+      and its tags are not counted in the tag cloud.</li>
+  <li>Unpublish &rarr; republish keeps the original date, so the archive does not reorder. If you
+      actually want a new date, clear <code>published_at</code> in the console
+      (<code>post.update_columns(published_at: nil)</code>) and publish again.</li>
+  <li>The archive is ordered by <code>published_at DESC</code>; the dashboard's &ldquo;all&rdquo; tab is
+      ordered by <code>created_at DESC</code>.</li>
+</ul>
+
+<h2>Editing and deleting</h2>
+<p>The editor loads the post through <code>GET /api/v1/posts/:slug</code> <em>with</em> the token, which
+is how it can open drafts. Saving sends the full draft as <code>PATCH /api/v1/posts/:slug</code> under
+the original slug, so renaming a slug works &mdash; and immediately breaks the old public URL, since no
+redirect is kept. Delete lives in the dashboard table behind a
+<code>window.confirm</code> and calls <code>DELETE /api/v1/posts/:slug</code>.</p>
+
+<h2>Dashboard</h2>
+<p><code>/admin</code> lists posts with tabs <em>all</em>, <em>draft</em>, <em>published</em> (a
+<code>?status=</code> query on <code>/api/v1/admin/posts</code>), showing title, status, updated date,
+and per-row Publish/Unpublish, Edit, and Delete actions. Any <code>401</code> from these calls clears
+<code>localStorage.admin_token</code> and bounces you to the login screen.</p>
+
+<div class="note"><p>Markdown from your own hand is rendered as-is by <code>react-markdown</code>, which
+does not execute embedded HTML by default. The RSS feed strips HTML explicitly with Redcarpet's
+<code>filter_html</code>.</p></div>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../features/themes.html">&larr; Four themes</a>
+        <a class="pager-link" href="../features/covers-uploads.html">Covers &amp; uploads &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+          } else {
+            fallback(text, done);
+          }
+        }
+      });
+
+      function fallback(text, done) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { document.execCommand("copy"); done(); } catch (error) { /* ignore */ }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>

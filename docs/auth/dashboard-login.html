@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Logging into the dashboard &middot; landing-page docs</title>
+    <link rel="stylesheet" href="../assets/docs.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button type="button" id="nav-toggle" class="ghost" aria-label="Toggle navigation">&#9776;</button>
+      <a class="brand" href="../index.html">landing-page <span>docs</span></a>
+      <button type="button" id="scheme-toggle" class="ghost">Dark mode</button>
+    </header>
+    <div class="layout">
+      <nav class="sidebar">
+        <input id="nav-filter" type="search" placeholder="Filter pages&hellip;" autocomplete="off" />
+        <div class="nav-group">
+          <p class="nav-title">Start here</p>
+          <ul>
+            <li><a href="../index.html">Documentation home</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Overview</p>
+          <ul>
+            <li><a href="../overview/architecture.html">Architecture</a></li>
+            <li><a href="../overview/tech-stack.html">Tech stack</a></li>
+            <li><a href="../overview/decisions.html">Design decisions</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Features</p>
+          <ul>
+            <li><a href="../features/public-site.html">Public site</a></li>
+            <li><a href="../features/themes.html">Four themes</a></li>
+            <li><a href="../features/blog-posts.html">Writing &amp; publishing</a></li>
+            <li><a href="../features/covers-uploads.html">Covers &amp; uploads</a></li>
+            <li><a href="../features/tags-pagination.html">Tags &amp; pagination</a></li>
+            <li><a href="../features/profile-about.html">Profile &amp; About page</a></li>
+            <li><a href="../features/rss-feed.html">RSS feed</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Authorization</p>
+          <ul>
+            <li><a href="../auth/dashboard-login.html" class="active">Logging into the dashboard</a></li>
+            <li><a href="../auth/jwt-internals.html">How the JWT auth works</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">API</p>
+          <ul>
+            <li><a href="../api/endpoints.html">All endpoints</a></li>
+            <li><a href="../api/data-model.html">Data model</a></li>
+            <li><a href="../api/errors.html">Errors &amp; status codes</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Operations</p>
+          <ul>
+            <li><a href="../ops/docker.html">Docker settings</a></li>
+            <li><a href="../ops/local-setup.html">Native local setup</a></li>
+            <li><a href="../ops/environment.html">Environment variables</a></li>
+            <li><a href="../ops/ci-quality.html">CI, tests &amp; linters</a></li>
+            <li><a href="../ops/production.html">Production readiness</a></li>
+          </ul>
+        </div>
+        <div class="nav-group">
+          <p class="nav-title">Reference</p>
+          <ul>
+            <li><a href="../reference/file-map.html">File map</a></li>
+            <li><a href="../reference/recipes.html">Recipes</a></li>
+            <li><a href="../reference/troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </nav>
+      <main>
+        <div class="crumbs"><a href="../index.html">Home</a> / Authorization / Logging into the dashboard</div>
+        <article>
+          <h1>Logging into the dashboard</h1>
+          <p class="lede">One password, one form, a 7-day token. Here is exactly how to get in and what to do when you cannot.</p>
+
+<h2>Logging in</h2>
+<ol>
+  <li>Start the stack (<code>docker compose up</code> or <code>bin/dev</code>).</li>
+  <li>Open <code>http://localhost:5173/admin/login</code>.</li>
+  <li>Enter the value of <code>ADMIN_PASSWORD</code> and submit.</li>
+  <li>On success the token lands in <code>localStorage.admin_token</code> and you are redirected to
+      <code>/admin</code> &mdash; or back to whichever admin URL you originally asked for
+      (<code>location.state.from</code>).</li>
+</ol>
+
+<h2>Where the password comes from</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>How you run it</th>
+<th>Source of <code>ADMIN_PASSWORD</code></th>
+<th>Default</th>
+</tr></thead>
+<tbody>
+<tr><td>Docker Compose</td><td>Root <code>.env</code> or an inline variable, passed into the <code>api</code> service</td><td><code>change-me</code></td></tr>
+<tr><td>Native (<code>bin/dev</code> / <code>bin/rails s</code>)</td><td><code>api/.env</code>, loaded by <code>dotenv-rails</code></td><td>none &mdash; login always fails until you set it</td></tr>
+<tr><td>Tests</td><td>Set to <code>test-password</code> in the integration test setup</td><td>&mdash;</td></tr>
+</tbody></table></div>
+<p>Copy <code>.env.example</code> to <code>.env</code> at the repo root (Docker) or
+<code>api/.env.example</code> to <code>api/.env</code> (native), then set both
+<code>ADMIN_PASSWORD</code> and <code>JWT_SECRET</code>. Both files are gitignored.</p>
+
+<h2>Changing the password</h2>
+<pre data-lang="sh"><code>echo 'ADMIN_PASSWORD=something-long' >> .env
+docker compose up -d --force-recreate api</code></pre>
+<p>Existing tokens keep working after a password change &mdash; they are only tied to
+<code>JWT_SECRET</code>. To invalidate every session, change <code>JWT_SECRET</code> instead (or as
+well) and restart.</p>
+
+<h2>Rate limiting</h2>
+<p><code>SessionController</code> declares
+<code>rate_limit to: 10, within: 3.minutes, only: :create</code>. The eleventh attempt from the same
+client inside three minutes returns <code>429 {"error":"Too many login attempts"}</code>. Rails' rate
+limiter uses the cache store, which is <code>:memory_store</code> in development &mdash; so the counter
+is per process and resets when the API restarts.</p>
+
+<h2>Signing out</h2>
+<p><strong>Sign out</strong> in the admin header removes <code>admin_token</code> and returns you to the
+login form. The token itself remains valid until it expires; nothing server-side is revoked. Any
+<code>401</code> received while using the dashboard triggers the same local cleanup automatically.</p>
+
+<h2>What can go wrong</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Symptom</th>
+<th>Cause</th>
+<th>Fix</th>
+</tr></thead>
+<tbody>
+<tr><td>&ldquo;Invalid password&rdquo;</td><td>Wrong password, or <code>ADMIN_PASSWORD</code> is empty/unset (an empty expected value always fails)</td><td>Set it in <code>.env</code> / <code>api/.env</code> and restart</td></tr>
+<tr><td>&ldquo;Too many login attempts&rdquo;</td><td>Rate limit hit</td><td>Wait three minutes or restart the API</td></tr>
+<tr><td>Login works, then everything 401s</td><td><code>JWT_SECRET</code> changed, or the API restarted with a different one</td><td>Sign in again</td></tr>
+<tr><td>500 on login</td><td><code>JWT_SECRET</code> not set at all &mdash; <code>Api::Security.jwt_secret</code> raises</td><td>Set <code>JWT_SECRET</code></td></tr>
+<tr><td>Redirected to login immediately</td><td>No <code>admin_token</code> in this browser profile</td><td>Sign in; the token is per browser, per origin</td></tr>
+<tr><td>&ldquo;Something went wrong&rdquo; / network error</td><td>API not running or <code>VITE_API_URL</code> points elsewhere</td><td>Check <code>http://localhost:3000/up</code></td></tr>
+</tbody></table></div>
+<div class="warn"><p>Because the login is a single shared secret with no second factor, treat
+<code>ADMIN_PASSWORD</code> as the whole security model of the write side. Do not reuse it, and never
+commit it &mdash; <code>.env.example</code> is committed, <code>.env</code> is not.</p></div>
+
+        </article>
+        <div class="pager">
+        <a class="pager-link" href="../features/rss-feed.html">&larr; RSS feed</a>
+        <a class="pager-link" href="../auth/jwt-internals.html">How the JWT auth works &rarr;</a>
+        </div>
+      </main>
+      <aside id="toc">
+        <p class="nav-title">On this page</p>
+        <ul id="toc-list"></ul>
+      </aside>
+    </div>
+    <script>
+
+    (function () {
+      var KEY = "docs-color-scheme";
+      var root = document.documentElement;
+      function apply(mode) {
+        root.setAttribute("data-scheme", mode);
+        try { localStorage.setItem(KEY, mode); } catch (error) { /* file:// without storage */ }
+        var button = document.getElementById("scheme-toggle");
+        if (button) button.textContent = mode === "dark" ? "Light mode" : "Dark mode";
+      }
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (error) { stored = null; }
+      apply(stored === "dark" || stored === "light" ? stored : "light");
+
+      document.addEventListener("click", function (event) {
+        var toggle = event.target.closest("#scheme-toggle");
+        if (toggle) {
+          apply(root.getAttribute("data-scheme") === "dark" ? "light" : "dark");
+          return;
+        }
+        var burger = event.target.closest("#nav-toggle");
+        if (burger) {
+          document.body.classList.toggle("nav-open");
+          return;
+        }
+        var copy = event.target.closest(".copy-button");
+        if (copy) {
+          var code = copy.parentElement.querySelector("code");
+          var text = code ? code.innerText : "";
+          var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1200); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+          } else {
+            fallback(text, done);
+          }
+        }
+      });
+
+      function fallback(text, done) {
+        var area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try { document.execCommand("copy"); done(); } catch (error) { /* ignore */ }
+        document.body.removeChild(area);
+      }
+
+      var filter = document.getElementById("nav-filter");
+      if (filter) {
+        filter.addEventListener("input", function () {
+          var needle = filter.value.trim().toLowerCase();
+          var groups = document.querySelectorAll(".sidebar .nav-group");
+          groups.forEach(function (group) {
+            var visible = 0;
+            group.querySelectorAll("a").forEach(function (link) {
+              var match = !needle || link.textContent.toLowerCase().indexOf(needle) >= 0;
+              link.style.display = match ? "" : "none";
+              if (match) visible += 1;
+            });
+            group.style.display = visible ? "" : "none";
+          });
+        });
+      }
+
+      var article = document.querySelector("article");
+      var toc = document.getElementById("toc-list");
+      if (article && toc) {
+        var headings = article.querySelectorAll("h2, h3");
+        if (!headings.length) {
+          var box = document.getElementById("toc");
+          if (box) box.style.display = "none";
+        }
+        headings.forEach(function (heading) {
+          if (!heading.id) {
+            heading.id = heading.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          }
+          var item = document.createElement("li");
+          item.className = heading.tagName === "H3" ? "toc-sub" : "";
+          var link = document.createElement("a");
+          link.href = "#" + heading.id;
+          link.textContent = heading.textContent;
+          item.appendChild(link);
+          toc.appendChild(item);
+        });
+      }
+
+      document.querySelectorAll("pre").forEach(function (pre) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-button";
+        button.textContent = "Copy";
+        pre.appendChild(button);
+      });
+    })();
+
+    </script>
+  </body>
+</html>
